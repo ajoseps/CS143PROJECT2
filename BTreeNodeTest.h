@@ -37,6 +37,25 @@ public:
     // Test Random Byte
     assert(resultBuffer[randIndex] == testBuffer[randIndex]);
 
-    cout << "RAN READ TEST ON PAGE: " << pid << "\n" << endl;
+    cout << "RAN read() TEST ON PAGE: " << pid << "\n" << endl;
+  }
+
+  void static getKeyCountLeafNodeTest()
+  {
+    string fn = "movie.del";
+    int pid = 0;
+    int pagesize = 1024;
+    int randIndex = rand() % pagesize-1 + 0;
+
+    // Reading from pagefile
+    BTLeafNode* leaf= new BTLeafNode();
+    PageFile* pf = new PageFile(fn ,'r');
+    leaf->read(pid, *pf);
+    int keyCount = leaf->getKeyCount();
+
+    // There are 42 keys in page 0
+    assert(keyCount == 42);
+
+    cout << "RAN keyCount() TEST ON PAGE: " << pid << "\n" << endl;
   }
 };

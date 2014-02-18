@@ -18,6 +18,7 @@ int main()
   // Tester
   BTreeNodeTest* tester = new BTreeNodeTest();
   tester->readLeafNodeTest();
+  tester->getKeyCountLeafNodeTest();
 
   SqlEngine::run(stdin);
 

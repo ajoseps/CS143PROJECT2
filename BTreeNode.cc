@@ -3,7 +3,7 @@
 using namespace std;
 
 /*
- * Outputs what is in buffer to stdout
+ * Returns a pointer to the BTLeafNode's buffer 
  */
 char* BTLeafNode::getBuffer()
 {
@@ -42,7 +42,16 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return 0; }
+{ 
+  // Assumes there is a key per line
+  int numOfKeys=0;
+  for(int i = 0; i < strlen(buffer); i++)
+  {
+    if(buffer[i] == '\n')
+      numOfKeys++;
+  }
+  return numOfKeys;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
