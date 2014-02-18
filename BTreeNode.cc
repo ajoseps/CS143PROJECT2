@@ -3,13 +3,26 @@
 using namespace std;
 
 /*
+ * Outputs what is in buffer to stdout
+ */
+char* BTLeafNode::getBuffer()
+{
+  return buffer;
+}
+
+/*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
  * @param pf[IN] PageFile to read from
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{ 
+  if(!pf.read(pid, buffer))
+    return 0; 
+  else
+    return 1;
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -18,7 +31,11 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{ 
+  if(!pf.write(pid, buffer))
+    return 0; 
+  return 1;
+}
 
 /*
  * Return the number of keys stored in the node.

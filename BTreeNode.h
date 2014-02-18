@@ -18,6 +18,11 @@
  */
 class BTLeafNode {
   public:
+    /**
+     * Returns a char pointer to buffer of LeafNode
+     */
+    char* getBuffer();
+      
    /**
     * Insert the (key, rid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.

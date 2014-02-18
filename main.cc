@@ -9,10 +9,16 @@
  
 #include "Bruinbase.h"
 #include "SqlEngine.h"
+#include "BTreeNodeTest.h"
 
 int main()
 {
   // run the SQL engine taking user commands from standard input (console).
+
+  // Tester
+  BTreeNodeTest* tester = new BTreeNodeTest();
+  tester->readLeafNodeTest();
+
   SqlEngine::run(stdin);
 
   return 0;
