@@ -13,10 +13,39 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+
+class BTNode {
+public:
+int getKeyCount () {
+        return keyCount;
+}
+void increaseKeyCount () {
+    keyCount++;
+}
+
+private:
+    int keyCount;
+    struct leafSlot
+    {
+        RecordId rid;
+        int key;
+    };
+
+    struct slot
+    {
+        union {
+            leafSlot leaf;
+            int key;
+            PageId pid;
+        }u;
+        BTNode* node;
+    };
+};
+
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  */
-class BTLeafNode {
+class BTLeafNode: public BTNode {
   public:
     /**
      * Returns a char pointer to buffer of LeafNode
@@ -107,13 +136,18 @@ class BTLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+
+    struct 
+    {
+        slot leafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
+    };
 }; 
 
 
 /**
  * BTNonLeafNode: The class representing a B+tree nonleaf node.
  */
-class BTNonLeafNode {
+class BTNonLeafNode: public BTNode {
   public:
    /**
     * Insert a (key, pid) pair to the node.

@@ -33,25 +33,20 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
 RC BTLeafNode::write(PageId pid, PageFile& pf)
 { 
   if(!pf.write(pid, buffer))
-    return 0; 
-  return 1;
+    return 0;
+  else
+    return 1;
 }
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
-int BTLeafNode::getKeyCount()
-{ 
-  // Assumes there is a key per line
-  int numOfKeys=0;
-  for(int i = 0; i < strlen(buffer); i++)
-  {
-    if(buffer[i] == '\n')
-      numOfKeys++;
-  }
-  return numOfKeys;
-}
+// int BTLeafNode::getKeyCount()
+// { 
+//   // return keyCount;
+//   return 0; 
+// }
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -178,4 +173,8 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
-{ return 0; }
+{ 
+  return 0; 
+}
+
+
