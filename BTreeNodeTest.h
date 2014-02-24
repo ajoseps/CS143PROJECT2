@@ -51,7 +51,7 @@ public:
     BTLeafNode* leaf= new BTLeafNode();
     PageFile* pf = new PageFile(fn ,'r');
     leaf->read(pid, *pf);
-    int keyCount = leaf->getKeyCount();
+    int keyCount = leaf->BTNode::getKeyCount();
 
     // There are 42 keys in page 0
     assert(keyCount == 42);

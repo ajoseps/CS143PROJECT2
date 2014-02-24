@@ -2,6 +2,17 @@
 
 using namespace std;
 
+// returns the key count of the node
+int BTNode::getKeyCount()
+{
+  return keyCount;
+}
+
+// Increase the key count of the node
+void BTNode::increaseKeyCount()
+{
+  keyCount++;
+}
 /*
  * Returns a pointer to the BTLeafNode's buffer 
  */
@@ -174,6 +185,21 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
+  BTNonLeafNode* root = new BTNonLeafNode();
+
+  slot slotFirstPid;
+  slotFirstPid.u.pid = pid1;
+
+  slot slotKey;
+  slotKey.u.key = key;
+
+  slot slotSecondPid;
+  slotSecondPid.u.pid = pid2;
+
+  root->nonLeafSlotArray[0] = slotFirstPid;
+  root->nonLeafSlotArray[1] = slotKey;
+  root->nonLeafSlotArray[2] = slotSecondPid;
+
   return 0; 
 }
 

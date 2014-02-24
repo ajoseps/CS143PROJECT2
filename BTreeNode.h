@@ -16,30 +16,30 @@
 
 class BTNode {
 public:
-int getKeyCount () {
-        return keyCount;
-}
-void increaseKeyCount () {
-    keyCount++;
-}
+
+int getKeyCount ();
+
+void increaseKeyCount ();
+
+struct leafSlot
+{
+    RecordId rid;
+    int key;
+};
+
+struct slot
+{
+    union {
+        leafSlot leaf;
+        int key;
+        PageId pid;
+    }u;
+    BTNode* node;
+};
 
 private:
     int keyCount;
-    struct leafSlot
-    {
-        RecordId rid;
-        int key;
-    };
-
-    struct slot
-    {
-        union {
-            leafSlot leaf;
-            int key;
-            PageId pid;
-        }u;
-        BTNode* node;
-    };
+    
 };
 
 /**
@@ -137,10 +137,7 @@ class BTLeafNode: public BTNode {
     */
     char buffer[PageFile::PAGE_SIZE];
 
-    struct 
-    {
-        slot leafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
-    };
+    slot leafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
 }; 
 
 
@@ -219,6 +216,8 @@ class BTNonLeafNode: public BTNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+
+    slot nonLeafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
 }; 
 
 #endif /* BTNODE_H */
