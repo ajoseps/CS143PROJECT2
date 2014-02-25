@@ -2,17 +2,7 @@
 
 using namespace std;
 
-// returns the key count of the node
-int BTNode::getKeyCount()
-{
-  return keyCount;
-}
 
-// Increase the key count of the node
-void BTNode::increaseKeyCount()
-{
-  keyCount++;
-}
 /*
  * Returns a pointer to the BTLeafNode's buffer 
  */
@@ -53,11 +43,10 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
-// int BTLeafNode::getKeyCount()
-// { 
-//   // return keyCount;
-//   return 0; 
-// }
+int BTLeafNode::getKeyCount()
+{ 
+  return keyCount;
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -66,7 +55,16 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+{ 
+  if(buffer_index + sizeof(key) + sizeof(RecordId) < PageFile::PAGE_SIZE){
+    if(insertKey(key) && insertRid(rid))
+      return 0; 
+    else
+      return 1; // ERROR
+  }
+  else
+    return 1; // ERROR
+}
 
 /*
  * Insert the (key, rid) pair to the node
@@ -108,7 +106,9 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+{
+  return (PageId)buffer[buffer_index-sizeof(PageId)];
+}
 
 /*
  * Set the pid of the next slibling node.
@@ -116,7 +116,53 @@ PageId BTLeafNode::getNextNodePtr()
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+{
+  memcpy((char*)buffer[buffer_index-sizeof(PageId)], &pid, sizeof(PageId));
+  return 0;
+}
+
+/* 
+ * Inserts a key into the buffer
+ * Returns True if inserts correctly
+ * Returns False if node is full
+ */
+bool BTLeafNode::insertKey(int key){
+    if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
+      return false;
+    memcpy((char*)buffer[buffer_index], &key, sizeof(int));
+    buffer_index+=sizeof(int);
+    keyCount++;
+    return true;
+}
+
+/* 
+ * Inserts a PageId into the buffer
+ * Returns True if inserts correctly
+ * Returns False if node is full
+ */
+bool BTLeafNode::insertPid(PageId pid){
+  if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
+      return false;
+  memcpy((char*)buffer[buffer_index], &pid, sizeof(PageId));
+  buffer_index+=sizeof(PageId);
+  return true;
+}
+
+/* 
+ * Inserts a RId into the buffer
+ * Returns True if inserts correctly
+ * Returns False if node is full
+ */
+bool BTLeafNode::insertRid(const RecordId& rid)
+{
+  if(buffer_index + sizeof(PageId) + sizeof(int) >= PageFile::PAGE_SIZE)
+      return false;
+  memcpy((char*)buffer[buffer_index], &rid.pid, sizeof(PageId));
+  buffer_index+=sizeof(PageId);
+  memcpy((char*)buffer[buffer_index], &rid.sid, sizeof(int));
+  buffer_index+=sizeof(int);
+  return true;
+}
 
 /*
  * Read the content of the node from the page pid in the PageFile pf.
@@ -125,7 +171,12 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{ 
+  if(!pf.read(pid, buffer))
+    return 0; 
+  else
+    return 1;
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -134,14 +185,21 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{ 
+  if(!pf.write(pid, buffer))
+    return 0;
+  else
+    return 1;
+}
 
 /*
  * Return the number of keys stored in the node.
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return 0; }
+{ 
+  return keyCount; 
+}
 
 
 /*
@@ -151,7 +209,17 @@ int BTNonLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTNonLeafNode::insert(int key, PageId pid)
-{ return 0; }
+{ 
+  if(buffer_index + sizeof(int) + sizeof(PageId) < PageFile::PAGE_SIZE){
+    if(insertKey(key) && insertPid(pid))
+      return 0; 
+    else
+      return 1; // ERROR
+  }
+  else
+    return 1; // ERROR
+  
+}
 
 /*
  * Insert the (key, pid) pair to the node
@@ -174,7 +242,19 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
-{ return 0; }
+{
+  int key_index = sizeof(PageId);
+  while(buffer[key_index] != searchKey)
+  {
+    key_index += 2*sizeof(int);
+    if(key_index >= PageFile::PAGE_SIZE)
+      return 1;
+  }
+
+  int pid_index = key_index - sizeof(int);
+  pid = buffer[pid_index];
+  return 0;
+}
 
 /*
  * Initialize the root node with (pid1, key, pid2).
@@ -185,22 +265,37 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
-  BTNonLeafNode* root = new BTNonLeafNode();
-
-  slot slotFirstPid;
-  slotFirstPid.u.pid = pid1;
-
-  slot slotKey;
-  slotKey.u.key = key;
-
-  slot slotSecondPid;
-  slotSecondPid.u.pid = pid2;
-
-  root->nonLeafSlotArray[0] = slotFirstPid;
-  root->nonLeafSlotArray[1] = slotKey;
-  root->nonLeafSlotArray[2] = slotSecondPid;
-
-  return 0; 
+  // !insert because insert returns 0 if it returns succesfully
+  if(insertPid(pid1) && !insert(key, pid2))
+    return 0; 
+  else
+    return 1; // ERROR
 }
 
+/* 
+ * Inserts a key into the buffer
+ * Returns True if inserts correctly
+ * Returns False if node is full
+ */
+  bool BTNonLeafNode::insertKey(int key){
+      if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
+        return false;
+      memcpy((char*)buffer[buffer_index], &key, sizeof(int));
+      buffer_index+=sizeof(int);
+      keyCount++;
+      return true;
+  }
+
+/* 
+ * Inserts a PageId into the buffer
+ * Returns True if inserts correctly
+ * Returns False if node is full
+ */
+  bool BTNonLeafNode::insertPid(PageId pid){
+    if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
+        return false;
+    memcpy((char*)buffer[buffer_index], &pid, sizeof(PageId));
+    buffer_index+=sizeof(PageId);
+    return true;
+  }
 

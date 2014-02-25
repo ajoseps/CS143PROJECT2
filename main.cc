@@ -16,10 +16,11 @@ int main()
   // run the SQL engine taking user commands from standard input (console).
 
   // Tester
+  /*
   BTreeNodeTest* tester = new BTreeNodeTest();
   tester->readLeafNodeTest();
   tester->getKeyCountLeafNodeTest();
-
+  */
   SqlEngine::run(stdin);
 
   return 0;

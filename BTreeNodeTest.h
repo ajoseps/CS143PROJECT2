@@ -7,7 +7,7 @@
 using namespace std;
 
 class BTreeNodeTest{
-
+/*
 public:
   void static readLeafNodeTest()
   {
@@ -57,5 +57,5 @@ public:
     assert(keyCount == 42);
 
     cout << "RAN keyCount() TEST ON PAGE: " << pid << "\n" << endl;
-  }
+  }*/
 };

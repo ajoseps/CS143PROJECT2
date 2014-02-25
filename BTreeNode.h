@@ -13,40 +13,16 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
-
-class BTNode {
-public:
-
-int getKeyCount ();
-
-void increaseKeyCount ();
-
-struct leafSlot
-{
-    RecordId rid;
-    int key;
-};
-
-struct slot
-{
-    union {
-        leafSlot leaf;
-        int key;
-        PageId pid;
-    }u;
-    BTNode* node;
-};
-
-private:
-    int keyCount;
-    
-};
-
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  */
-class BTLeafNode: public BTNode {
+class BTLeafNode {
   public:
+
+    BTLeafNode(){
+        buffer_index = 0;
+        keyCount = 0;
+    }
     /**
      * Returns a char pointer to buffer of LeafNode
      */
@@ -135,17 +111,46 @@ class BTLeafNode: public BTNode {
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
     */
+    int buffer_index;
+    int keyCount;
     char buffer[PageFile::PAGE_SIZE];
 
-    slot leafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
+    /* 
+     * Inserts a key into the buffer
+     * Returns True if inserts correctly
+     * Returns False if node is full
+     */
+    bool insertKey(int key);
+
+    /* 
+     * Inserts a RId into the buffer
+     * Returns True if inserts correctly
+     * Returns False if node is full
+     */
+     bool insertRid(const RecordId& rid);
+
+    /* 
+     * Inserts a PageId into the buffer
+     * Returns True if inserts correctly
+     * Returns False if node is full
+     */
+    bool insertPid(PageId pid);
 }; 
 
 
 /**
  * BTNonLeafNode: The class representing a B+tree nonleaf node.
  */
-class BTNonLeafNode: public BTNode {
+class BTNonLeafNode {
   public:
+
+    // Constructor for BTNonLeafNode
+    // Inits private vars
+    BTNonLeafNode(){
+        buffer_index = 0;
+        keyCount = 0;
+    }
+
    /**
     * Insert a (key, pid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -215,9 +220,23 @@ class BTNonLeafNode: public BTNode {
     * The main memory buffer for loading the content of the disk page 
     * that contains the node.
     */
+    int buffer_index;
+    int keyCount;
     char buffer[PageFile::PAGE_SIZE];
 
-    slot nonLeafSlotArray [PageFile::PAGE_SIZE/sizeof(slot)];
+    /* 
+     * Inserts a key into the buffer
+     * Returns True if inserts correctly
+     * Returns False if node is full
+     */
+    bool insertKey(int key);
+
+    /* 
+     * Inserts a PageId into the buffer
+     * Returns True if inserts correctly
+     * Returns False if node is full
+     */
+    bool insertPid(PageId pid);
 }; 
 
 #endif /* BTNODE_H */
