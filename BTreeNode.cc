@@ -56,11 +56,24 @@ int BTLeafNode::getKeyCount()
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
-  if(buffer_index + sizeof(key) + sizeof(RecordId) < PageFile::PAGE_SIZE){
-    if(insertKey(key) && insertRid(rid))
-      return 0; 
-    else
-      return 1; // ERROR
+  int potentiallyUsedBuffer = buffer_index + sizeof(int) + sizeof(RecordId);
+  if(potentiallyUsedBuffer < PageFile::PAGE_SIZE){
+    for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
+    {
+      if (key <= buffer[i])
+      {
+        insertIndex = i;
+        memcpy ((char*)buffer[insertIndex + sizeof(RecordId) + sizeof(int)], &buffer[insertIndex], potentiallyUsedBuffer-insertIndex+1);
+        insertKey(key, insertIndex);
+        insertRid(rid, insertIndex + sizeof(int));
+        return 0;
+      }
+      else {
+        insertKey(key, buffer_index);
+        insertRid(rid, buffer_index + sizeof(int));
+        return 0;
+      }
+    }
   }
   else
     return 1; // ERROR
@@ -78,7 +91,54 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+{
+  if (insert(key, rid) == 0 && split(sibling, siblingKey)) //if insert succeeds, then just split node
+  {
+      return 0;
+  }
+  else { //if insert fails due to lack of space, split then insert
+    for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int)) {
+      if (key <= buffer[i]) //PROBLEM: comparing int to one char? do we need to include length?
+      {
+        insertIndex = i; //where to insert
+      }
+    }
+    int halfKeyCount = (int)floor(keyCount/2);
+    int splitIndex = sizeof(RecordId) * halfKeyCount + sizeof(int) * halfKeyCount;
+
+    split(sibling, siblingKey);
+    if (insertIndex <= splitIndex) //insert into original node after split
+    {
+      insert(key, rid);
+      return 0;
+    }
+    else if (insertIndex > splitIndex) { //insert into new node
+      sibling.insert(key, rid);
+      return 0;
+    }
+    else {
+      return 1; //ERROR
+    }
+  }
+}
+
+bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
+  if (sibling.buffer_index != 0)
+  {
+    return false; //ERROR: sibling node is not empty
+  }
+  else {
+    int halfKeyCount = (int)floor(keyCount/2);
+    int splitIndex = sizeof(RecordId) * halfKeyCount + sizeof(int) * halfKeyCount;
+    
+    memcpy ((char*)sibling.buffer[0], &buffer[splitIndex], buffer_index - splitIndex + 1);
+    //set sibling's buffer_index
+    sibling.buffer_index = buffer_index - splitIndex;
+    buffer_index = splitIndex + sizeof(RecordId); 
+    siblingKey = sibling.buffer[ sizeof(RecordId) ];
+    return true;
+  }
+}
 
 /*
  * Find the entry whose key value is larger than or equal to searchKey
@@ -126,10 +186,10 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * Returns True if inserts correctly
  * Returns False if node is full
  */
-bool BTLeafNode::insertKey(int key){
+bool BTLeafNode::insertKey(int key, int insertIndex){
     if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
       return false;
-    memcpy((char*)buffer[buffer_index], &key, sizeof(int));
+    memcpy((char*)buffer[insertIndex], &key, sizeof(int));
     buffer_index+=sizeof(int);
     keyCount++;
     return true;
@@ -140,10 +200,10 @@ bool BTLeafNode::insertKey(int key){
  * Returns True if inserts correctly
  * Returns False if node is full
  */
-bool BTLeafNode::insertPid(PageId pid){
+bool BTLeafNode::insertPid(PageId pid, int insertIndex){
   if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
       return false;
-  memcpy((char*)buffer[buffer_index], &pid, sizeof(PageId));
+  memcpy((char*)buffer[insertIndex], &pid, sizeof(PageId));
   buffer_index+=sizeof(PageId);
   return true;
 }
@@ -153,13 +213,13 @@ bool BTLeafNode::insertPid(PageId pid){
  * Returns True if inserts correctly
  * Returns False if node is full
  */
-bool BTLeafNode::insertRid(const RecordId& rid)
+bool BTLeafNode::insertRid(const RecordId& rid, int insertIndex)
 {
   if(buffer_index + sizeof(PageId) + sizeof(int) >= PageFile::PAGE_SIZE)
       return false;
-  memcpy((char*)buffer[buffer_index], &rid.pid, sizeof(PageId));
+  memcpy((char*)buffer[insertIndex], &rid.pid, sizeof(PageId));
   buffer_index+=sizeof(PageId);
-  memcpy((char*)buffer[buffer_index], &rid.sid, sizeof(int));
+  memcpy((char*)buffer[insertIndex + sizeof(PageId)], &rid.sid, sizeof(int));
   buffer_index+=sizeof(int);
   return true;
 }
@@ -210,11 +270,24 @@ int BTNonLeafNode::getKeyCount()
  */
 RC BTNonLeafNode::insert(int key, PageId pid)
 { 
-  if(buffer_index + sizeof(int) + sizeof(PageId) < PageFile::PAGE_SIZE){
-    if(insertKey(key) && insertPid(pid))
-      return 0; 
-    else
-      return 1; // ERROR
+  int potentiallyUsedBuffer = buffer_index + sizeof(int) + sizeof(PageId);
+  if(potentiallyUsedBuffer < PageFile::PAGE_SIZE){
+    for (int i = sizeof(PageId); i < buffer_index; i = i + sizeof(PageId) + sizeof(int))
+    {
+      if (key <= buffer[i]) //PROBLEM: comparing int to one char? do we need to include length?
+      {
+        insertIndex = i;
+        memcpy ((char*)buffer[insertIndex + sizeof(PageId) + sizeof(int)], &buffer[insertIndex], potentiallyUsedBuffer-insertIndex+1);
+        insertKey(key, insertIndex);
+        insertPid(pid, insertIndex + sizeof(int));
+        return 0;
+      }
+      else { //insert at the end because it's bigger than everything else
+        insertKey(key, buffer_index);
+        insertPid(pid, buffer_index + sizeof(int));
+        return 0;
+      }
+    }
   }
   else
     return 1; // ERROR
@@ -232,7 +305,55 @@ RC BTNonLeafNode::insert(int key, PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey)
-{ return 0; }
+{ 
+  if (insert(key, pid) == 0 && split(sibling, midKey)) //if insert succeeds, then just split node
+  {
+      return 0;
+  }
+  else { //if insert fails due to lack of space, split then insert
+    for (int i = sizeof(PageId); i < buffer_index; i = i + sizeof(PageId) + sizeof(int)) {
+      if (key <= buffer[i]) //PROBLEM: comparing int to one char? do we need to include length?
+      {
+        insertIndex = i; //where to insert
+      }
+    }
+    int halfKeyCount = (int)floor(keyCount/2);
+    int splitIndex = sizeof(PageId) * halfKeyCount + sizeof(int) * halfKeyCount;
+
+    split(sibling, midKey);
+    if (insertIndex <= splitIndex) //insert into original node after split
+    {
+      insert(key, pid);
+      return 0;
+    }
+    else if (insertIndex > splitIndex) { //insert into new node
+      sibling.insert(key, pid);
+      return 0;
+    }
+    else {
+      return 1; //ERROR
+    }
+  }
+}
+
+bool BTNonLeafNode::split(BTNonLeafNode& sibling, int& midKey)
+{
+    if (sibling.buffer_index != 0)
+    {
+      return false; //ERROR: sibling node is not empty
+    }
+    else {
+      int halfKeyCount = (int)floor(keyCount/2);
+      int splitIndex = sizeof(PageId) * halfKeyCount + sizeof(int) * halfKeyCount;
+      
+      memcpy ((char*)sibling.buffer[0], &buffer[splitIndex], buffer_index - splitIndex + 1);
+      //set sibling's buffer_index
+      sibling.buffer_index = buffer_index - splitIndex;
+      buffer_index = splitIndex + sizeof(PageId); 
+      midKey = sibling.buffer[ sizeof(PageId) ];
+      return true;
+    }
+}
 
 /*
  * Given the searchKey, find the child-node pointer to follow and
@@ -266,7 +387,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
   // !insert because insert returns 0 if it returns succesfully
-  if(insertPid(pid1) && !insert(key, pid2))
+  if(insertPid(pid1, 0) && !insert(key, pid2))
     return 0; 
   else
     return 1; // ERROR
@@ -277,10 +398,10 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
  * Returns True if inserts correctly
  * Returns False if node is full
  */
-  bool BTNonLeafNode::insertKey(int key){
+  bool BTNonLeafNode::insertKey(int key, int insertIndex){
       if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
         return false;
-      memcpy((char*)buffer[buffer_index], &key, sizeof(int));
+      memcpy((char*)buffer[insertIndex], &key, sizeof(int));
       buffer_index+=sizeof(int);
       keyCount++;
       return true;
@@ -291,10 +412,10 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
  * Returns True if inserts correctly
  * Returns False if node is full
  */
-  bool BTNonLeafNode::insertPid(PageId pid){
+  bool BTNonLeafNode::insertPid(PageId pid, int insertIndex){
     if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
         return false;
-    memcpy((char*)buffer[buffer_index], &pid, sizeof(PageId));
+    memcpy((char*)buffer[insertIndex], &pid, sizeof(PageId));
     buffer_index+=sizeof(PageId);
     return true;
   }

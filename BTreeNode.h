@@ -12,6 +12,7 @@
 
 #include "RecordFile.h"
 #include "PageFile.h"
+#include <cmath>
 
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
@@ -49,6 +50,13 @@ class BTLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC insertAndSplit(int key, const RecordId& rid, BTLeafNode& sibling, int& siblingKey);
+
+    /*
+    * split contents of the node with a sibling node
+    * sibling node must be empty
+    * param OUT the midKey
+    */
+    bool split (BTLeafNode& sibling, int& siblingKey);
 
    /**
     * Find the index entry whose key value is larger than or equal to searchKey
@@ -106,6 +114,7 @@ class BTLeafNode {
     */
     RC write(PageId pid, PageFile& pf);
 
+
   private:
    /**
     * The main memory buffer for loading the content of the disk page 
@@ -113,6 +122,7 @@ class BTLeafNode {
     */
     int buffer_index;
     int keyCount;
+    int insertIndex;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 
@@ -120,21 +130,21 @@ class BTLeafNode {
      * Returns True if inserts correctly
      * Returns False if node is full
      */
-    bool insertKey(int key);
+    bool insertKey(int key, int insertIndex);
 
     /* 
      * Inserts a RId into the buffer
      * Returns True if inserts correctly
      * Returns False if node is full
      */
-     bool insertRid(const RecordId& rid);
+     bool insertRid(const RecordId& rid, int insertIndex);
 
     /* 
      * Inserts a PageId into the buffer
      * Returns True if inserts correctly
      * Returns False if node is full
      */
-    bool insertPid(PageId pid);
+    bool insertPid(PageId pid, int insertIndex);
 }; 
 
 
@@ -173,6 +183,13 @@ class BTNonLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey);
+
+    /*
+    * split contents of the node with a sibling node
+    * sibling node must be empty
+    * param OUT the midKey
+    */
+    bool split (BTNonLeafNode& sibling, int& midKey);
 
    /**
     * Given the searchKey, find the child-node pointer to follow and
@@ -222,6 +239,7 @@ class BTNonLeafNode {
     */
     int buffer_index;
     int keyCount;
+    int insertIndex;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 
@@ -229,14 +247,14 @@ class BTNonLeafNode {
      * Returns True if inserts correctly
      * Returns False if node is full
      */
-    bool insertKey(int key);
+    bool insertKey(int key, int insertIndex);
 
     /* 
      * Inserts a PageId into the buffer
      * Returns True if inserts correctly
      * Returns False if node is full
      */
-    bool insertPid(PageId pid);
+    bool insertPid(PageId pid, int insertIndex);
 }; 
 
 #endif /* BTNODE_H */
