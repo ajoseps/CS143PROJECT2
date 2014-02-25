@@ -149,7 +149,17 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+{
+  for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
+  {
+    if (searchKey <= buffer[i])
+    {
+      eid = i;
+      return 0;
+    }
+  }
+  return 1; // searchKey is the biggest... 
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -159,7 +169,18 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+{
+  if (eid < buffer_index - sizeof(int) - sizeof(RecordId))
+  {
+    key = buffer[eid];
+    rid.pid = buffer[eid+sizeof(int)]; //struct rid = pid and sid WHICH ONE FIRST?????
+    rid.sid = buffer[eid + sizeof(PageId) + sizeof(int)];
+    return 0;
+  }
+  else {
+    return 1; //eid doesn't exist in buffer
+  }
+}
 
 /*
  * Return the pid of the next slibling node.
