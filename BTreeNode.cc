@@ -134,7 +134,9 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     memcpy ((char*)sibling.buffer[0], &buffer[splitIndex], buffer_index - splitIndex + 1);
     //set sibling's buffer_index
     sibling.buffer_index = buffer_index - splitIndex;
-    buffer_index = splitIndex + sizeof(RecordId); 
+    PageId siblingPid = sibling.buffer[0];
+    insertPid(siblingPid, splitIndex);
+    buffer_index = splitIndex + sizeof(PageId); 
     siblingKey = sibling.buffer[ sizeof(RecordId) ];
     return true;
   }
