@@ -123,6 +123,7 @@ class BTLeafNode {
     int buffer_index;
     int keyCount;
     int insertIndex;
+    bool leafNode = true;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 
@@ -240,6 +241,7 @@ class BTNonLeafNode {
     int buffer_index;
     int keyCount;
     int insertIndex;
+    bool leafNode = false;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 

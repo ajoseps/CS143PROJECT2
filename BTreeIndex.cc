@@ -29,7 +29,10 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    return 0;
+    if (PageFile::open (indexname, mode) !=0) 
+    	return 1; 
+    else
+    	return 0;
 }
 
 /*
@@ -38,7 +41,12 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    return 0;
+	if (PageFile::close() != 0)
+	{
+		return 1;
+	}
+	else
+		return 0;
 }
 
 /*
@@ -49,6 +57,7 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
+	
     return 0;
 }
 
