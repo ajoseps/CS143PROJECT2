@@ -24,6 +24,18 @@ class BTLeafNode {
         buffer_index = 0;
         keyCount = 0;
     }
+
+    BTLeafNode(char* pageBuffer){
+        memcpy(buffer, pageBuffer, PageFile::PAGE_SIZE);
+        buffer_index = 0;
+        keyCount = 0;
+
+        while(buffer[buffer_index] != '\0'){
+            buffer_index+=12;
+            keyCount++;
+        }
+        buffer_index-= 4; // to return to the end of the pid of the leaf node
+    }
     /**
      * Returns a char pointer to buffer of LeafNode
      */
@@ -123,7 +135,6 @@ class BTLeafNode {
     int buffer_index;
     int keyCount;
     int insertIndex;
-    bool leafNode = true;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 
@@ -241,7 +252,6 @@ class BTNonLeafNode {
     int buffer_index;
     int keyCount;
     int insertIndex;
-    bool leafNode = false;
     char buffer[PageFile::PAGE_SIZE];
 
     /* 

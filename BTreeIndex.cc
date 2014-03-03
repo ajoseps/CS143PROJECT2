@@ -29,7 +29,7 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    if (PageFile::open (indexname, mode) !=0) 
+    if (pf.open (indexname, mode) !=0) 
     	return 1; 
     else
     	return 0;
@@ -41,7 +41,7 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-	if (PageFile::close() != 0)
+	if (pf.close() != 0)
 	{
 		return 1;
 	}
@@ -95,5 +95,26 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
-    return 0;
+    // Read in the page's buffer, into a local buffer
+    PageId searchPid = cursor.pid;
+    char* buffer[PageFile::PAGE_SIZE];
+    pf.read(searchPid, buffer);
+
+    // might need to check if leafnode
+    BTLeafNode node = BTLeafNode((char*)buffer);
+    int entryId = cursor.eid;
+
+    // iterating the cursor
+    // if it is the last eid, it will go to the next page in the pagefile
+    if(node.getKeyCount() == entryId){ 
+        cursor.pid++;
+        cursor.eid = 0;
+    }
+    else{
+        cursor.eid++;
+    }
+
+    // key and rid are updated with the corresponding inputted entryId
+    // returns a RC
+    return node.readEntry(entryId, key, rid);
 }
