@@ -394,7 +394,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
     if(key_index >= PageFile::PAGE_SIZE)
       return 1; // searchKey not found
   }
-  
+
   // key_index will point to last (key, pid) pair
   int pid_index = key_index + sizeof(int);
   pid = buffer[pid_index];
@@ -423,7 +423,7 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
  * @param key[OUT] the key from the entry
  * @param pid[OUT] the PageId from the entry
  * @return 0 if successful. Return an error code if there is an error.
- */
+ */ /*
 RC BTNonLeafNode::readEntry(int eid, int& key, PageId& pid)
 {
   if(eid > keyCount)
@@ -438,7 +438,7 @@ RC BTNonLeafNode::readEntry(int eid, int& key, PageId& pid)
 
   return 0;
 }
-
+*/
 /* 
  * Inserts a key into the buffer
  * Returns True if inserts correctly

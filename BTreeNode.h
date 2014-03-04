@@ -262,16 +262,6 @@ class BTNonLeafNode {
     */
     RC write(PageId pid, PageFile& pf);
 
-
-   /**
-    * Read the (key, pid) pair from the eid entry.
-    * @param eid[IN] the entry number to read the (key, pid) pair from
-    * @param key[OUT] the key from the slot
-    * @param rid[OUT] the PageId from the slot
-    * @return 0 if successful. Return an error code if there is an error.
-    */
-    RC readEntry(int eid, int& key, PageId& pid);
-
   private:
    /**
     * The main memory buffer for loading the content of the disk page 
