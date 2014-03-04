@@ -387,15 +387,16 @@ bool BTNonLeafNode::split(BTNonLeafNode& sibling, int& midKey)
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 {
-  int key_index = sizeof(PageId);
-  while(buffer[key_index] != searchKey)
+  int key_index = sizeof(PageId); // index is at the first key in the node
+  while((int) buffer[key_index] != searchKey) 
   {
-    key_index += 2*sizeof(int);
+    key_index += sizeof(int) + sizeof(PageId);
     if(key_index >= PageFile::PAGE_SIZE)
-      return 1;
+      return 1; // searchKey not found
   }
-
-  int pid_index = key_index - sizeof(int);
+  
+  // key_index will point to last (key, pid) pair
+  int pid_index = key_index + sizeof(int);
   pid = buffer[pid_index];
   return 0;
 }
@@ -414,6 +415,28 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
     return 0; 
   else
     return 1; // ERROR
+}
+
+/*
+ * Read the (key, pid) pair from the eid entry.
+ * @param eid[IN] the entry number to read the (key, pid) pair from
+ * @param key[OUT] the key from the entry
+ * @param pid[OUT] the PageId from the entry
+ * @return 0 if successful. Return an error code if there is an error.
+ */
+RC BTNonLeafNode::readEntry(int eid, int& key, PageId& pid)
+{
+  if(eid > keyCount)
+    return 1; //not a valid entry
+
+  int offset = sizeof(PageId); // points to index of first key
+  offset += eid * (sizeof(int) + sizeof(PageId)); // Buffer offset to get to correct entry
+
+  key = (int)buffer[offset];
+  offset += sizeof(int);     // moves index to pid
+  pid = (PageId)buffer[offset]; 
+
+  return 0;
 }
 
 /* 

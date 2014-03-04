@@ -24,7 +24,15 @@ class BTLeafNode {
         buffer_index = 0;
         keyCount = 0;
     }
-
+    BTLeafNode(PageId pid, PageFile pf){
+        read(pid, pf);
+        while(buffer[buffer_index] != '\0'){
+            buffer_index+=12;
+            keyCount++;
+        }
+        buffer_index-= 4; // to return to the end of the pid of the leaf node
+    }
+    /*
     BTLeafNode(char* pageBuffer){
         memcpy(buffer, pageBuffer, PageFile::PAGE_SIZE);
         buffer_index = 0;
@@ -35,7 +43,8 @@ class BTLeafNode {
             keyCount++;
         }
         buffer_index-= 4; // to return to the end of the pid of the leaf node
-    }
+    }*/
+
     /**
      * Returns a char pointer to buffer of LeafNode
      */
@@ -173,6 +182,15 @@ class BTNonLeafNode {
         keyCount = 0;
     }
 
+    BTNonLeafNode(PageId pid, PageFile pf){
+        read(pid, pf);
+        while(buffer[buffer_index] != '\0'){
+            buffer_index+=12;
+            keyCount++;
+        }
+        buffer_index-= 4; // to return to the end of the pid of the leaf node
+    }
+
    /**
     * Insert a (key, pid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -243,6 +261,16 @@ class BTNonLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC write(PageId pid, PageFile& pf);
+
+
+   /**
+    * Read the (key, pid) pair from the eid entry.
+    * @param eid[IN] the entry number to read the (key, pid) pair from
+    * @param key[OUT] the key from the slot
+    * @param rid[OUT] the PageId from the slot
+    * @return 0 if successful. Return an error code if there is an error.
+    */
+    RC readEntry(int eid, int& key, PageId& pid);
 
   private:
    /**

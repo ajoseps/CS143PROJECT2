@@ -82,6 +82,20 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
+    int leafPid;
+    int currHeight = 1;
+    while(currHeight < treeHeight) // stops when at leafnode
+    {
+        BTNonLeafNode* nonleaf = new BTNonLeafNode(rootPid, pf);
+        nonleaf->locateChildPtr(searchKey, leafPid); // gets the pid of the next node
+        currHeight++;
+    }
+
+    BTLeafNode* leaf = new BTLeafNode(leafPid, pf);
+
+    // sets the cursor's values
+    leaf->locate(searchKey, cursor.eid);
+    cursor.pid = leafPid;
     return 0;
 }
 
@@ -97,17 +111,15 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
     // Read in the page's buffer, into a local buffer
     PageId searchPid = cursor.pid;
-    char* buffer[PageFile::PAGE_SIZE];
-    pf.read(searchPid, buffer);
 
     // might need to check if leafnode
-    BTLeafNode node = BTLeafNode((char*)buffer);
+    BTLeafNode node = BTLeafNode(searchPid, pf);
     int entryId = cursor.eid;
 
     // iterating the cursor
     // if it is the last eid, it will go to the next page in the pagefile
     if(node.getKeyCount() == entryId){ 
-        cursor.pid++;
+        cursor.pid = node.getNextNodePtr();
         cursor.eid = 0;
     }
     else{
