@@ -22,7 +22,7 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
   if(!pf.read(pid, buffer))
     return 0; 
   else
-    return 1;
+    return RC_FILE_READ_FAILED;
 }
     
 /*
@@ -36,7 +36,7 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
   if(!pf.write(pid, buffer))
     return 0;
   else
-    return 1;
+    return RC_FILE_WRITE_FAILED;
 }
 
 /*
@@ -76,7 +76,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     }
   }
   else
-    return 1; // ERROR
+    return RC_NODE_FULL; // ERROR
 }
 
 /*
@@ -160,7 +160,7 @@ RC BTLeafNode::locate(int searchKey, int& eid)
       return 0;
     }
   }
-  return 1; // searchKey is the biggest... 
+  return RC_NO_SUCH_RECORD; // searchKey is the biggest... 
 }
 
 /*
@@ -180,7 +180,7 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
     return 0;
   }
   else {
-    return 1; //eid doesn't exist in buffer
+    return RC_NO_SUCH_RECORD; //eid doesn't exist in buffer
   }
 }
 
@@ -258,7 +258,7 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
   if(!pf.read(pid, buffer))
     return 0; 
   else
-    return 1;
+    return RC_FILE_READ_FAILED;
 }
     
 /*
@@ -272,7 +272,7 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
   if(!pf.write(pid, buffer))
     return 0;
   else
-    return 1;
+    return RC_FILE_WRITE_FAILED;
 }
 
 /*
@@ -313,7 +313,7 @@ RC BTNonLeafNode::insert(int key, PageId pid)
     }
   }
   else
-    return 1; // ERROR
+    return RC_NODE_FULL; // ERROR
   
 }
 
@@ -392,7 +392,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
   {
     key_index += sizeof(int) + sizeof(PageId);
     if(key_index >= PageFile::PAGE_SIZE)
-      return 1; // searchKey not found
+      return RC_NO_SUCH_RECORD; // searchKey not found
   }
 
   // key_index will point to last (key, pid) pair
@@ -411,7 +411,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
   // !insert because insert returns 0 if it returns succesfully
-  if(insertPid(pid1, 0) && !insert(key, pid2))
+  if(insertPid(pid1, 0) && insert(key, pid2) == 0)
     return 0; 
   else
     return 1; // ERROR
