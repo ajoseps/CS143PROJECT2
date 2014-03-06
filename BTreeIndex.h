@@ -58,6 +58,7 @@ class BTreeIndex {
    */
   RC insert(int key, const RecordId& rid);
 
+  RC insertHelp(int key, const RecordId& rid, bool overflow, int height, PageId pid, PageId siblingPid, int siblingKey);
   /**
    * Find the leaf-node index entry whose key value is larger than or
    * equal to searchKey and output its location (i.e., the page id of the node

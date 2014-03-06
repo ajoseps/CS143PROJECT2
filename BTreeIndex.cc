@@ -29,10 +29,27 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    if (pf.open (indexname, mode) !=0) 
-    	return 1; 
-    else
+    if (pf.open (indexname, mode) !=0) {
+    	return RC_FILE_OPEN_FAILED; 
+    }
+
+    char buffer[PageFile::PAGE_SIZE];
+
+    //if file is empty, initialize rootPid & treeHeight
+    if (pf.endPid()==0)
+    {
+        rootPid = -1;
+        treeHeight = 0;
+    }
+    else {
+        if (pf.read(0, buffer) != 0)
+        {
+            return RC_FILE_READ_FAILED;
+        }
+        rootPid = (PageId)buffer[0];
+        treeHeight = (int)(buffer[sizeof(PageId)]);
     	return 0;
+    }
 }
 
 /*
@@ -41,12 +58,91 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-	if (pf.close() != 0)
-	{
-		return 1;
-	}
-	else
-		return 0;
+    char buffer[PageFile::PAGE_SIZE];
+    buffer[0] = (PageId)rootPid;
+    buffer[sizeof(PageId)] = (int)treeHeight;
+
+    if (pf.write(0, buffer) != 0 ) {
+        return RC_FILE_WRITE_FAILED;
+    }
+    return pf.close();
+}
+
+
+/*
+* IN: key passed in from insert
+* IN: rid passed in from insert
+* OUT: overflow -- whether the last insert caused an overflow
+* IN: height of the node that we're currently looking at
+* IN: pid that we're currently looking at
+* OUT: siblingPid -- new pid of the sibling after splitting
+* OUT: siblingKey -- equivalent to midKey in insertAndSplit, needed to insert into parent node
+*/
+
+RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool overflow, int height, PageId pid, PageId siblingPid, int siblingKey) {
+
+    overflow = false;
+    if (height == treeHeight) //leaf node, base case.
+    {
+        BTLeafNode leaf;
+        leaf.read(pid, pf);
+        if (leaf.insert(key, rid) == RC_NODE_FULL)
+        {
+            overflow = true;
+            BTLeafNode siblingLeaf;
+            if (leaf.insertAndSplit(key, rid, siblingLeaf, siblingKey))
+            {
+                return 1; //ERROR IN SPLIT
+            }
+            siblingPid = pf.endPid();
+            siblingLeaf.setNextNodePtr(leaf.getNextNodePtr());
+            leaf.setNextNodePtr(siblingPid);
+
+            if (siblingLeaf.write(siblingPid, pf))
+            {
+                return RC_FILE_WRITE_FAILED;
+            }
+            if (leaf.write(pid, pf))
+            {
+                return RC_FILE_WRITE_FAILED;
+            }
+        }
+    }
+
+    else { //nonleaf node
+        BTNonLeafNode nonleaf;
+        PageId childPid;
+
+        nonleaf.read(pid, pf);
+        nonleaf.locateChildPtr(key, childPid);
+        insertHelp(key, rid, overflow, height+1, childPid, siblingPid, siblingKey);
+
+        if (overflow)
+        {
+            if (nonleaf.insert(siblingKey, siblingPid)) //nonleaf full
+            {
+
+                BTNonLeafNode siblingNonLeaf;
+                int midKey;                
+
+                if (siblingNonLeaf.insertAndSplit(siblingKey, siblingPid, siblingNonLeaf, midKey))
+                {
+                    return 1; //ERROR IN SPLIT. TOO BAD.
+                }
+                siblingKey = midKey;
+                siblingPid = pf.endPid();
+                if (siblingNonLeaf.write(siblingPid, pf))
+                {
+                    return RC_FILE_WRITE_FAILED;
+                }
+            }
+            else {
+                overflow = false;
+            }
+            nonleaf.write(pid, pf);
+        }
+    }
+    return 0;
 }
 
 /*
@@ -57,7 +153,36 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
-	
+    if (treeHeight == 0) //initialize root node
+    {
+        BTLeafNode leaf;
+        leaf.insert(key, rid);
+        rootPid = pf.endPid();
+        treeHeight = 1;
+        leaf.write(rootPid, pf);
+        return 0;
+    }
+
+    bool overflow;
+    PageId siblingPid;
+    int siblingKey;
+
+    if (insertHelp(key, rid, overflow, 1, rootPid, siblingPid, siblingKey))
+    {
+        return 1; // ERROR SOMEHWERE IN INSERT TOO BAD SO SAD.
+    }
+
+    //new root node cus of overflow
+    if (overflow)
+    {
+        BTNonLeafNode root;
+        root.initializeRoot(rootPid, siblingKey, siblingPid);
+        rootPid = pf.endPid();
+        treeHeight++;
+        if (root.write (rootPid, pf)) {
+            return RC_FILE_WRITE_FAILED;
+        }
+    }
     return 0;
 }
 

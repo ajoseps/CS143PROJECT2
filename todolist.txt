@@ -4,3 +4,4 @@ BTreeNode.cc
 line 101, 298, 336 & anywhere that compares key with buffer[i]: comparing key (int) to one char? do we need to typcast?
 line 176: rid is a struct with pid and sid.. which one is stored first in buffer?
 
+line 193: getnextnodeptr: should we increase the endPid? we're supposed to start counting from 0 for PID, so this should be where we increment this right?
