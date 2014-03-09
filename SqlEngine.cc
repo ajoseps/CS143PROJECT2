@@ -15,6 +15,7 @@
 
 // Custom Includes
 #include "RecordFile.h"
+#include "BTreeIndex.h"
 
 using namespace std;
 
@@ -137,6 +138,16 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
   string tuple, myValue, tableName;
   int myKey;
 
+  // Opens index file if index = true;
+  BTreeIndex indexFile;
+  if (index)
+  {
+    if (indexFile.open(table+ ".idx", 'w'))
+    {
+      return RC_FILE_OPEN_FAILED;
+    }
+  }
+  
   myLoadFile.open(loadfile.c_str());
 
   // Checks if file was succesfully opened
@@ -145,9 +156,11 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
     // Opens/Creates the table
     RecordFile myTable; 
     tableName = table + ".tbl";
-    myTable.open(tableName, 'w');
+    if (myTable.open(tableName, 'w')) {
+      return RC_FILE_OPEN_FAILED;
+    }
 
-    // While the laodfile is not at EOF, it reads each line and parses it
+    // While the loadfile is not at EOF, it reads each line and parses it
     // Inserting each parsed tuple into the table
     while(!myLoadFile.eof()){
       getline(myLoadFile, tuple);
@@ -158,16 +171,28 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
         RecordId endRid = myTable.endRid();
         myTable.append((int)myKey, myValue, endRid);
       }
+
+      if (index)
+      {
+        RecordId endRid = myTable.endRid();
+        if (indexFile.insert(myKey, endRid))
+        {
+          cout << "Error: NOT INSERTED INTO INDEX" <<endl;
+        }
+      }
     }
     myTable.close();
   }
   else
   {
     cout << "Cannot Open File \n" << endl;
+    return RC_FILE_OPEN_FAILED;
   }
   myLoadFile.close();
-  
-
+  if (index)
+  {
+    indexFile.close();
+  }
   return 0;
 }
 
