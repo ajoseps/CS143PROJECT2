@@ -2,7 +2,7 @@ SRC = main.cc SqlParser.tab.c lex.sql.c SqlEngine.cc BTreeIndex.cc BTreeNode.cc 
 HDR = Bruinbase.h PageFile.h SqlEngine.h BTreeIndex.h BTreeNode.h RecordFile.h SqlParser.tab.h BTreeNodeTest.h
 
 bruinbase: $(SRC) $(HDR)
-	g++ -ggdb -o $@ $(SRC)
+	g++ -g -o0 -ggdb -o $@ $(SRC)
 
 lex.sql.c: SqlParser.l
 	flex -Psql $<

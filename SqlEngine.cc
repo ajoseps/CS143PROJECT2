@@ -170,14 +170,14 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
       {
         RecordId endRid = myTable.endRid();
         myTable.append((int)myKey, myValue, endRid);
-      }
 
-      if (index)
-      {
-        RecordId endRid = myTable.endRid();
-        if (indexFile.insert(myKey, endRid))
+        if (index)
         {
-          cout << "Error: NOT INSERTED INTO INDEX" <<endl;
+          RecordId endRid = myTable.endRid();
+          if (indexFile.insert(myKey, endRid))
+          {
+            cout << "Error: NOT INSERTED INTO INDEX" <<endl;
+          }
         }
       }
     }
