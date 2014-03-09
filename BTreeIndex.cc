@@ -59,6 +59,7 @@ RC BTreeIndex::open(const string& indexname, char mode)
 RC BTreeIndex::close()
 {
     char buffer[PageFile::PAGE_SIZE];
+    memset(buffer, 0, PageFile::PAGE_SIZE);
     buffer[0] = (PageId)rootPid;
     buffer[sizeof(PageId)] = (int)treeHeight;
 
@@ -79,7 +80,7 @@ RC BTreeIndex::close()
 * OUT: siblingKey -- equivalent to midKey in insertAndSplit, needed to insert into parent node
 */
 
-RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool overflow, int height, PageId pid, PageId siblingPid, int siblingKey) {
+RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool& overflow, int height, PageId pid, PageId& siblingPid, int& siblingKey) {
 
     overflow = false;
     if (height == treeHeight) //leaf node, base case.
@@ -163,9 +164,9 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
         return 0;
     }
 
-    bool overflow;
-    PageId siblingPid;
-    int siblingKey;
+    bool overflow = false;
+    PageId siblingPid = -1;
+    int siblingKey = -1;
 
     if (insertHelp(key, rid, overflow, 1, rootPid, siblingPid, siblingKey))
     {

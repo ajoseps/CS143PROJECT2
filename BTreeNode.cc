@@ -63,7 +63,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
       if (key <= buffer[i])
       {
         insertIndex = i;
-        memcpy ((char*)buffer[insertIndex + sizeof(RecordId) + sizeof(int)], &buffer[insertIndex], potentiallyUsedBuffer-insertIndex+1);
+        memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
         return 0;
@@ -131,13 +131,13 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     int halfKeyCount = (int)floor(keyCount/2);
     int splitIndex = sizeof(RecordId) * halfKeyCount + sizeof(int) * halfKeyCount;
     
-    memcpy ((char*)sibling.buffer[0], &buffer[splitIndex], buffer_index - splitIndex + 1);
+    memcpy ((char*)sibling.buffer, (buffer + splitIndex), buffer_index - splitIndex + 1);
     //set sibling's buffer_index
     sibling.buffer_index = buffer_index - splitIndex;
     PageId siblingPid = sibling.buffer[0];
     insertPid(siblingPid, splitIndex);
     buffer_index = splitIndex + sizeof(PageId); 
-    siblingKey = sibling.buffer[ sizeof(RecordId) ];
+    siblingKey = (int)(sibling.buffer + sizeof(RecordId));
     return true;
   }
 }
@@ -175,8 +175,8 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
   if (eid < buffer_index - sizeof(int) - sizeof(RecordId))
   {
     key = buffer[eid];
-    rid.pid = buffer[eid+sizeof(int)]; //struct rid = pid and sid WHICH ONE FIRST?????
-    rid.sid = buffer[eid + sizeof(PageId) + sizeof(int)];
+    rid.pid = (PageId) (buffer + eid+sizeof(int)); //struct rid = pid and sid WHICH ONE FIRST?????
+    rid.sid = (int) (buffer + eid + sizeof(PageId) + sizeof(int));
     return 0;
   }
   else {
@@ -190,7 +190,7 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-  return (PageId)buffer[buffer_index-sizeof(PageId)];
+  return (PageId)(buffer + buffer_index-sizeof(PageId));
 }
 
 /*
@@ -200,7 +200,7 @@ PageId BTLeafNode::getNextNodePtr()
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
 {
-  memcpy((char*)buffer[buffer_index-sizeof(PageId)], &pid, sizeof(PageId));
+  memcpy((char*)(buffer + buffer_index-sizeof(PageId)), &pid, sizeof(PageId));
   return 0;
 }
 
@@ -212,7 +212,7 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
 bool BTLeafNode::insertKey(int key, int insertIndex){
     if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
       return false;
-    memcpy((char*)buffer[insertIndex], &key, sizeof(int));
+    memcpy((char*) (buffer + insertIndex), &key, sizeof(int));
     buffer_index+=sizeof(int);
     keyCount++;
     return true;
@@ -226,7 +226,7 @@ bool BTLeafNode::insertKey(int key, int insertIndex){
 bool BTLeafNode::insertPid(PageId pid, int insertIndex){
   if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
       return false;
-  memcpy((char*)buffer[insertIndex], &pid, sizeof(PageId));
+  memcpy((char*)(buffer + insertIndex), &pid, sizeof(PageId));
   buffer_index+=sizeof(PageId);
   return true;
 }
@@ -240,9 +240,9 @@ bool BTLeafNode::insertRid(const RecordId& rid, int insertIndex)
 {
   if(buffer_index + sizeof(PageId) + sizeof(int) >= PageFile::PAGE_SIZE)
       return false;
-  memcpy((char*)buffer[insertIndex], &rid.pid, sizeof(PageId));
+  memcpy((char*)(buffer + insertIndex), &rid.pid, sizeof(PageId));
   buffer_index+=sizeof(PageId);
-  memcpy((char*)buffer[insertIndex + sizeof(PageId)], &rid.sid, sizeof(int));
+  memcpy((char*)(buffer + insertIndex + sizeof(PageId)), &rid.sid, sizeof(int));
   buffer_index+=sizeof(int);
   return true;
 }
