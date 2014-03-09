@@ -66,14 +66,15 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
         memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
-        return 0;
+//        return 0;
       }
       else {
         insertKey(key, buffer_index);
         insertRid(rid, buffer_index + sizeof(int));
-        return 0;
+//        return 0;
       }
     }
+      return 0;
   }
   else
     return RC_NODE_FULL; // ERROR
@@ -137,7 +138,7 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     PageId siblingPid = sibling.buffer[0];
     insertPid(siblingPid, splitIndex);
     buffer_index = splitIndex + sizeof(PageId); 
-    siblingKey = (int)(sibling.buffer + sizeof(RecordId));
+    siblingKey = *(int *)(sibling.buffer + sizeof(RecordId));
     return true;
   }
 }
@@ -175,8 +176,8 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
   if (eid < buffer_index - sizeof(int) - sizeof(RecordId))
   {
     key = buffer[eid];
-    rid.pid = (PageId) (buffer + eid+sizeof(int)); //struct rid = pid and sid WHICH ONE FIRST?????
-    rid.sid = (int) (buffer + eid + sizeof(PageId) + sizeof(int));
+    rid.pid = *(PageId *) (buffer + eid+sizeof(int)); //struct rid = pid and sid WHICH ONE FIRST?????
+    rid.sid = *(int *) (buffer + eid + sizeof(PageId) + sizeof(int));
     return 0;
   }
   else {
@@ -190,7 +191,7 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-  return (PageId)(buffer + buffer_index-sizeof(PageId));
+  return *(PageId *)(buffer + buffer_index-sizeof(PageId));
 }
 
 /*
@@ -303,14 +304,15 @@ RC BTNonLeafNode::insert(int key, PageId pid)
         memcpy ((char*)buffer[insertIndex + sizeof(PageId) + sizeof(int)], &buffer[insertIndex], potentiallyUsedBuffer-insertIndex+1);
         insertKey(key, insertIndex);
         insertPid(pid, insertIndex + sizeof(int));
-        return 0;
+//        return 0;
       }
       else { //insert at the end because it's bigger than everything else
         insertKey(key, buffer_index);
         insertPid(pid, buffer_index + sizeof(int));
-        return 0;
+//        return 0;
       }
     }
+      return 0;
   }
   else
     return RC_NODE_FULL; // ERROR

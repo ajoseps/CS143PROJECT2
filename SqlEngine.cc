@@ -170,25 +170,25 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
       // Appends only if it parses a tuple correctly
       if(!parseLoadLine(tuple, myKey, myValue))
       {
-        RecordId endRid = myTable.endRid();
+        RecordId lastRid = myTable.endRid();
 
-        myTable.append((int)myKey, myValue, endRid);
+        myTable.append((int)myKey, myValue, lastRid);
 
         if (index)
         { 
           if(myKey == NULL)
             cout << "ERROR: key is not init" << endl;
-          if(endRid.sid == NULL)
+          if(lastRid.sid == NULL)
             cout << "ERROR: sid is not init" << endl;
-          if(endRid.pid == NULL)
+          if(lastRid.pid == NULL)
             cout << "ERROR: pid is not init" << endl;
 
-          if(endRid.sid < 0)
-            cout << "ERROR: invalid sid value: " << endRid.sid << endl;
-          if(endRid.pid < 0)
-            cout << "ERROR: invalid pid value: " << endRid.pid << endl;
+          if(lastRid.sid < 0)
+            cout << "ERROR: invalid sid value: " << lastRid.sid << endl;
+          if(lastRid.pid < 0)
+            cout << "ERROR: invalid pid value: " << lastRid.pid << endl;
           
-          if (indexFile.insert(myKey, endRid))
+          if (indexFile.insert(myKey, lastRid))
           {
             cout << "Error: NOT INSERTED INTO INDEX" <<endl;
           }
