@@ -143,6 +143,7 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
   if (index)
   {
     string indexName = table + ".idx";
+
     if (indexFile.open(indexName, 'w'))
     {
       return RC_FILE_OPEN_FAILED;
@@ -170,11 +171,23 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
       if(!parseLoadLine(tuple, myKey, myValue))
       {
         RecordId endRid = myTable.endRid();
+
         myTable.append((int)myKey, myValue, endRid);
 
         if (index)
-        {
-          RecordId endRid = myTable.endRid();
+        { 
+          if(myKey == NULL)
+            cout << "ERROR: key is not init" << endl;
+          if(endRid.sid == NULL)
+            cout << "ERROR: sid is not init" << endl;
+          if(endRid.pid == NULL)
+            cout << "ERROR: pid is not init" << endl;
+
+          if(endRid.sid < 0)
+            cout << "ERROR: invalid sid value: " << endRid.sid << endl;
+          if(endRid.pid < 0)
+            cout << "ERROR: invalid pid value: " << endRid.pid << endl;
+          
           if (indexFile.insert(myKey, endRid))
           {
             cout << "Error: NOT INSERTED INTO INDEX" <<endl;

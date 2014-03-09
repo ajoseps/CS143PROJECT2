@@ -29,11 +29,14 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
+    //PageFile pf(indexname, mode);
+    
     if (pf.open (indexname, mode) !=0) {
-    	return RC_FILE_OPEN_FAILED; 
+    	return 1; 
     }
-
+    
     char buffer[PageFile::PAGE_SIZE];
+    memset(buffer, 0, PageFile::PAGE_SIZE);
 
     //if file is empty, initialize rootPid & treeHeight
     if (pf.endPid()==0)
@@ -44,12 +47,12 @@ RC BTreeIndex::open(const string& indexname, char mode)
     else {
         if (pf.read(0, buffer) != 0)
         {
-            return RC_FILE_READ_FAILED;
+            return 1;
         }
         rootPid = (PageId)buffer[0];
         treeHeight = (int)(buffer[sizeof(PageId)]);
-    	return 0;
     }
+    return 0;
 }
 
 /*
