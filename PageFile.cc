@@ -29,7 +29,7 @@ PageFile::PageFile(const string& filename, char mode)
 {
   fd = -1;
   epid = 0;
-  open(filename.c_str(), mode);
+  open(filename, mode);
 }
 
 RC PageFile::open(const string& filename, char mode)

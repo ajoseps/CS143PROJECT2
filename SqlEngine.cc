@@ -142,7 +142,8 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
   BTreeIndex indexFile;
   if (index)
   {
-    if (indexFile.open(table+ ".idx", 'w'))
+    string indexName = table + ".idx";
+    if (indexFile.open(indexName, 'w'))
     {
       return RC_FILE_OPEN_FAILED;
     }

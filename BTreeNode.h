@@ -21,10 +21,12 @@ class BTLeafNode {
   public:
 
     BTLeafNode(){
+        memset(buffer, 0, PageFile::PAGE_SIZE);
         buffer_index = 0;
         keyCount = 0;
     }
     BTLeafNode(PageId pid, PageFile pf){
+        memset(buffer, 0, PageFile::PAGE_SIZE);
         read(pid, pf);
         while(buffer[buffer_index] != '\0'){
             buffer_index+=12;
@@ -32,18 +34,6 @@ class BTLeafNode {
         }
         buffer_index-= 4; // to return to the end of the pid of the leaf node
     }
-    /*
-    BTLeafNode(char* pageBuffer){
-        memcpy(buffer, pageBuffer, PageFile::PAGE_SIZE);
-        buffer_index = 0;
-        keyCount = 0;
-
-        while(buffer[buffer_index] != '\0'){
-            buffer_index+=12;
-            keyCount++;
-        }
-        buffer_index-= 4; // to return to the end of the pid of the leaf node
-    }*/
 
     /**
      * Returns a char pointer to buffer of LeafNode
@@ -178,11 +168,13 @@ class BTNonLeafNode {
     // Constructor for BTNonLeafNode
     // Inits private vars
     BTNonLeafNode(){
+        memset(buffer, 0, PageFile::PAGE_SIZE);
         buffer_index = 0;
         keyCount = 0;
     }
 
     BTNonLeafNode(PageId pid, PageFile pf){
+        memset(buffer, 0, PageFile::PAGE_SIZE);
         read(pid, pf);
         while(buffer[buffer_index] != '\0'){
             buffer_index+=12;

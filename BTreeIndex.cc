@@ -176,8 +176,8 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
     if (overflow)
     {
         BTNonLeafNode root;
-        root.initializeRoot(rootPid, siblingKey, siblingPid);
         rootPid = pf.endPid();
+        root.initializeRoot(rootPid, siblingKey, siblingPid);
         treeHeight++;
         if (root.write (rootPid, pf)) {
             return RC_FILE_WRITE_FAILED;

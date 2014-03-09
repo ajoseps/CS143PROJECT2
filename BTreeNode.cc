@@ -369,11 +369,12 @@ bool BTNonLeafNode::split(BTNonLeafNode& sibling, int& midKey)
       int halfKeyCount = (int)floor(keyCount/2);
       int splitIndex = sizeof(PageId) * halfKeyCount + sizeof(int) * halfKeyCount;
       
-      memcpy ((char*)sibling.buffer[0], &buffer[splitIndex], buffer_index - splitIndex + 1);
+      memcpy ((char*)sibling.buffer, (buffer + splitIndex), buffer_index - splitIndex + 1);
       //set sibling's buffer_index
       sibling.buffer_index = buffer_index - splitIndex;
       buffer_index = splitIndex + sizeof(PageId); 
-      midKey = sibling.buffer[ sizeof(PageId) ];
+      memcpy((int*)&midKey, (sibling.buffer + sizeof(PageId)), sizeof(PageId));
+      //midKey = sibling.buffer[ sizeof(PageId) ];
       return true;
     }
 }
@@ -425,7 +426,7 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
   bool BTNonLeafNode::insertKey(int key, int insertIndex){
       if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
         return false;
-      memcpy((char*)buffer[insertIndex], &key, sizeof(int));
+      memcpy((char*) (buffer + insertIndex), &key, sizeof(int));
       buffer_index+=sizeof(int);
       keyCount++;
       return true;
@@ -439,7 +440,7 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
   bool BTNonLeafNode::insertPid(PageId pid, int insertIndex){
     if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
         return false;
-    memcpy((char*)buffer[insertIndex], &pid, sizeof(PageId));
+    memcpy((char*) (buffer + insertIndex), &pid, sizeof(PageId));
     buffer_index+=sizeof(PageId);
     return true;
   }

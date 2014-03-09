@@ -6,4 +6,4 @@ rm -f medium.tbl medium.idx
 rm -f large.tbl large.idx
 rm -f xlarge.tbl xlarge.idx
 
-valgrind --leak-check=yes ./bruinbase < arun.sql
+valgrind --leak-check=yes -v ./bruinbase < arun.sql
