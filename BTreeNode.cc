@@ -1,4 +1,5 @@
 #include "BTreeNode.h"
+#include <iostream>
 
 using namespace std;
 
@@ -147,15 +148,24 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
 {
+  eid = 0;
+  // cout << "BTLeafNode:: locate -- buffer_index: " << buffer_index <<endl;
   for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
   {
-    if (searchKey <= buffer[i])
+    if (searchKey > *(int *) (buffer + i))
     {
-      eid = i;
-      return 0;
+      eid++;
+    }
+    else {
+      break;
     }
   }
-  return RC_NO_SUCH_RECORD; // searchKey is the biggest... 
+
+  if (eid == getKeyCount())
+  {
+    return RC_NO_SUCH_RECORD;
+  }
+  return 0;
 }
 
 /*
@@ -167,16 +177,24 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 {
-  if (eid < buffer_index - sizeof(int) - sizeof(RecordId))
+  // cout << "buffer index: " << buffer_index <<endl;
+  // cout<<"EID: " <<eid<<endl<<endl;
+  if (buffer_index == 0)
   {
-    key = buffer[eid];
+    return RC_NO_SUCH_RECORD;
+  }
+
+  else if (eid <= getKeyCount())
+  {
+    // cout<< "EID IN IF: " << eid << endl << "check cond: "<< 0-4-8 << endl;
+    key = *(int *) (buffer + eid);
     rid.pid = *(PageId *) (buffer + eid+sizeof(int)); //struct rid = pid and sid WHICH ONE FIRST?????
     rid.sid = *(int *) (buffer + eid + sizeof(PageId) + sizeof(int));
     return 0;
   }
-  else {
+  
     return RC_NO_SUCH_RECORD; //eid doesn't exist in buffer
-  }
+  
 }
 
 /*

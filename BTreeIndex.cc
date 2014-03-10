@@ -9,6 +9,7 @@
  
 #include "BTreeIndex.h"
 #include "BTreeNode.h"
+#include <iostream>
 
 using namespace std;
 
@@ -209,25 +210,50 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  *                    with the key value.
  * @return error code. 0 if no error.
  */
-RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
+RC BTreeIndex::locate(int searchKey, IndexCursor& cursor) //might need to re-do
 {
-    int leafPid;
-    int currHeight = 1;
-    while(currHeight < treeHeight) // stops when at leafnode
-    {
+    PageId childPid = -1;
+    PageId pid = rootPid;
+    int currHeight = 0;
+    while (currHeight < treeHeight-1) {
         BTNonLeafNode nonleaf;
-        nonleaf.read(rootPid, pf);
-        nonleaf.locateChildPtr(searchKey, leafPid); // gets the pid of the next node
+        nonleaf.read(pid, pf);
+        nonleaf.locateChildPtr(searchKey, childPid);
         currHeight++;
     }
 
     BTLeafNode leaf;
-    leaf.read(leafPid, pf);
+    if (childPid < -1)
+    {
+        leaf.read(childPid, pf);
+        cursor.pid = childPid;
+        leaf.locate(searchKey, cursor.eid);
+        return 0;
+    }
+    else
+        return 1;
 
-    // sets the cursor's values
-    leaf.locate(searchKey, cursor.eid);
-    cursor.pid = leafPid;
-    return 0;
+
+    // int leafPid;
+    // int currHeight = 1;
+    // while(currHeight < treeHeight) // stops when at leafnode
+    // {
+    //     cout << "BTreeIndex:: locate -- in while loop" << endl;
+    //     BTNonLeafNode nonleaf;
+    //     nonleaf.read(rootPid, pf);
+    //     nonleaf.locateChildPtr(searchKey, leafPid); // gets the pid of the next node
+    //     currHeight++;
+    // }
+
+    // cout<<"BTreeIndex::locate leafPid: "<<leafPid<<endl;
+
+    // BTLeafNode leaf;
+    // leaf.read(leafPid, pf);
+
+    // // sets the cursor's values
+    // leaf.locate(searchKey, cursor.eid);
+    // cursor.pid = leafPid;
+    // return 0;
 }
 
 /*
@@ -241,17 +267,24 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
     // Read in the page's buffer, into a local buffer
-    PageId searchPid = cursor.pid;
-
+    // cout<< "BTreeIndex:: readForward -- cursor.eid: " << cursor.eid << endl << "pid: " <<cursor.pid <<endl;
+    PageId searchPid = -1;
+    if (cursor.pid < -1)
+    {
+        searchPid = cursor.pid;
+    }
     // might need to check if leafnode
     BTLeafNode node;
-    node.read(searchPid, pf);
+    if (searchPid < -1 && searchPid >= pf.endPid())
+    {
+        node.read(searchPid, pf);
+    }
 
     int entryId = cursor.eid;
 
     // iterating the cursor
     // if it is the last eid, it will go to the next page in the pagefile
-    if(node.getKeyCount() == entryId){ 
+    if(node.getKeyCount() <= entryId){ 
         cursor.pid = node.getNextNodePtr();
         cursor.eid = 0;
     }

@@ -49,7 +49,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   int lookUpCondition = -1;
   BTreeIndex indexFile;
 
-  if ((rc=indexFile.open(table + ".idx", 'r')) >= 0 ) { //if indexfile opens in read mode
+  if (indexFile.open(table + ".idx", 'r') == 0 ) { //if indexfile opens in read mode
     IndexCursor cur;
 
     // iterates through every condition in the SELECT statement
@@ -77,6 +77,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
         case SelCond::GE:
           if(lookUpCondition == -1  || lookUpConditionKey < iKey) // if a later condition has a GT or GE key greater than lookUpCondition's
             lookUpCondition = i;
+            break;
+        default:
+            break;
       }
     }
 
@@ -87,9 +90,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       indexFile.locate(0, cur);
     
     rid.pid = rid.sid = 0;
-    while(!indexFile.readForward(cur, key, rid)) // returns 0 if no error
+    while(indexFile.readForward(cur, key, rid) == 0) // returns 0 if no error
     {
-      if ((rc = rf.read(rid, key, value)) < 0) { // reads in a tuple
+      if ((rc = rf.read(rid, key, value)) > 0) { // reads in a tuple
         fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
         rf.close();
         return rc;
