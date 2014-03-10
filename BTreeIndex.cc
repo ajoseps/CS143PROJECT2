@@ -215,15 +215,17 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     int currHeight = 1;
     while(currHeight < treeHeight) // stops when at leafnode
     {
-        BTNonLeafNode* nonleaf = new BTNonLeafNode(rootPid, pf);
-        nonleaf->locateChildPtr(searchKey, leafPid); // gets the pid of the next node
+        BTNonLeafNode nonleaf;
+        nonleaf.read(rootPid, pf);
+        nonleaf.locateChildPtr(searchKey, leafPid); // gets the pid of the next node
         currHeight++;
     }
 
-    BTLeafNode* leaf = new BTLeafNode(leafPid, pf);
+    BTLeafNode leaf;
+    leaf.read(leafPid, pf);
 
     // sets the cursor's values
-    leaf->locate(searchKey, cursor.eid);
+    leaf.locate(searchKey, cursor.eid);
     cursor.pid = leafPid;
     return 0;
 }
