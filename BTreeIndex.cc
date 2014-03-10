@@ -244,7 +244,9 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     PageId searchPid = cursor.pid;
 
     // might need to check if leafnode
-    BTLeafNode node = BTLeafNode(searchPid, pf);
+    BTLeafNode node;
+    node.read(searchPid, pf);
+
     int entryId = cursor.eid;
 
     // iterating the cursor

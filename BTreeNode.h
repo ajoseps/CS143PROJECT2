@@ -25,15 +25,15 @@ class BTLeafNode {
         buffer_index = 0;
         keyCount = 0;
     }
-    BTLeafNode(PageId pid, PageFile pf){
-        memset(buffer, 0, PageFile::PAGE_SIZE);
-        read(pid, pf);
-        while(buffer[buffer_index] != '\0'){
-            buffer_index+=12;
-            keyCount++;
-        }
-        buffer_index-= 4; // to return to the end of the pid of the leaf node
-    }
+    // BTLeafNode(PageId pid, PageFile pf){
+    //     memset(buffer, 0, PageFile::PAGE_SIZE);
+    //     read(pid, pf);
+    //     while(buffer[buffer_index] != '\0'){
+    //         buffer_index+=12;
+    //         keyCount++;
+    //     }
+    //     buffer_index-= 4; // to return to the end of the pid of the leaf node
+    // }
 
 
     /**
@@ -174,6 +174,7 @@ class BTNonLeafNode {
         keyCount = 0;
     }
 
+/*
     BTNonLeafNode(PageId pid, PageFile pf){
         memset(buffer, 0, PageFile::PAGE_SIZE);
         read(pid, pf);
@@ -183,7 +184,7 @@ class BTNonLeafNode {
         }
         buffer_index-= 4; // to return to the end of the pid of the leaf node
     }
-
+*/
    /**
     * Insert a (key, pid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.

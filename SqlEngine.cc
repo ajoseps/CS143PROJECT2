@@ -85,7 +85,8 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       indexFile.locate(atoi(cond[lookUpCondition].value), cur);
     else
       indexFile.locate(0, cur);
-
+    
+    rid.pid = rid.sid = 0;
     while(!indexFile.readForward(cur, key, rid)) // returns 0 if no error
     {
       if ((rc = rf.read(rid, key, value)) < 0) { // reads in a tuple

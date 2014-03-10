@@ -19,10 +19,7 @@ char* BTLeafNode::getBuffer()
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
 { 
-  if(!pf.read(pid, buffer))
-    return 0; 
-  else
-    return RC_FILE_READ_FAILED;
+  return pf.read(pid, buffer);
 }
     
 /*
@@ -33,10 +30,7 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
 { 
-  if(!pf.write(pid, buffer))
-    return 0;
-  else
-    return RC_FILE_WRITE_FAILED;
+  return pf.write(pid, buffer);
 }
 
 /*
