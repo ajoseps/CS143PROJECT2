@@ -44,15 +44,125 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   RC     rc;
   int    key;     
   string value;
-  int    count;
+  int    count = 0;
   int    diff;
+  int lookUpCondition = -1;
   BTreeIndex indexFile;
-  string indexName = table + ".idx";
 
-  if (!indexFile.open(indexName, 'r')) { //if indexfile opens in read mode
+  if ((rc=indexFile.open(table + ".idx", 'r')) >= 0 ) { //if indexfile opens in read mode
+    IndexCursor cur;
 
+    // iterates through every condition in the SELECT statement
+    for(int i = 0; i < cond.size(); i++){
+      // Gets the keys 
+      int lookUpConditionKey;
+      int iKey;
+
+      if(lookUpCondition > -1)
+        lookUpConditionKey = atoi(cond[lookUpCondition].value);
+      iKey = atoi(cond[i].value);
+
+      if(cond[i].attr == 2) // If it is a value attribute continue
+          continue;
+
+      // Condition Comparison's
+      switch(cond[i].comp)
+      {
+        case SelCond::NE:
+          continue;
+        case SelCond::EQ:
+          lookUpCondition = i;
+          break;
+        case SelCond::GT:
+        case SelCond::GE:
+          if(lookUpCondition == -1  || lookUpConditionKey < iKey) // if a later condition has a GT or GE key greater than lookUpCondition's
+            lookUpCondition = i;
+      }
+    }
+
+    // Get Index Cursor in Tree to Key
+    if(lookUpCondition > -1)
+      indexFile.locate(atoi(cond[lookUpCondition].value), cur);
+    else
+      indexFile.locate(0, cur);
+
+    while(!indexFile.readForward(cur, key, rid)) // returns 0 if no error
+    {
+      if ((rc = rf.read(rid, key, value)) < 0) { // reads in a tuple
+        fprintf(stderr, "Error: while reading a tuple from table %s\n", table.c_str());
+        rf.close();
+        return rc;
+      }
+
+      // iterates through every condition in the SELECT statement
+      // check the conditions on the tuple
+      for (unsigned i = 0; i < cond.size(); i++) {
+        // compute the difference between the tuple value and the condition value
+        switch (cond[i].attr) {
+        case 1:
+          diff = key - atoi(cond[i].value);
+          break;
+        case 2:
+          diff = strcmp(value.c_str(), cond[i].value);
+          break;
+        }
+
+        // skip the tuple if any condition is not met
+        switch (cond[i].comp) {
+        case SelCond::EQ:
+          if (diff != 0) 
+            if(cond[i].attr == 1)
+              goto is_count;
+            else 
+              continue;
+          break;
+        case SelCond::NE:
+          if (diff == 0) 
+            continue;
+          break;
+        case SelCond::GT:
+          if (diff <= 0)
+            continue;
+          break;
+        case SelCond::LT:
+          if (diff >= 0) 
+            if(cond[i].attr == 1)
+              goto is_count;
+            else
+              continue;
+          break;
+        case SelCond::GE:
+          if (diff < 0) 
+            continue;
+          break;
+        case SelCond::LE:
+          if (diff > 0)
+            if(cond[i].attr == 1)
+              goto is_count;
+            else 
+              continue;
+          break;
+        }
+      }
+
+      // the condition is met for the tuple. 
+      // increase matching tuple counter
+      count++;
+
+      // print the tuple 
+      switch (attr) {
+      case 1:  // SELECT key
+        fprintf(stdout, "%d\n", key);
+        break;
+      case 2:  // SELECT value
+        fprintf(stdout, "%s\n", value.c_str());
+        break;
+      case 3:  // SELECT *
+        fprintf(stdout, "%d '%s'\n", key, value.c_str());
+        break;
+      }
+    }
   }
-
   else { //no index file present
       // open the table file
     if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
@@ -126,12 +236,13 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       ++rid;
     }
 
+    is_count:
     // print matching tuple count if "select count(*)"
     if (attr == 4) {
       fprintf(stdout, "%d\n", count);
     }
     rc = 0;
-    }
+  }
   // close the table file and return
   exit_select:
   rf.close();
