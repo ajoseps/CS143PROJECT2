@@ -123,6 +123,8 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
         case 2:
           diff = strcmp(value.c_str(), cond[i].value);
           break;
+        default:
+          continue;
         }
 
         // skip the tuple if any condition is not met

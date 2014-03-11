@@ -58,6 +58,8 @@ class BTreeIndex {
    */
   RC insert(int key, const RecordId& rid);
 
+  RC insertHelper(int key, const RecordId& rid, PageId pid, int height, int& ofKey, PageId& ofPid);
+
   RC insertHelp(int key, const RecordId& rid, bool& overflow, int height, PageId pid, PageId& siblingPid, int& siblingKey);
   /**
    * Find the leaf-node index entry whose key value is larger than or
@@ -96,6 +98,7 @@ class BTreeIndex {
 
   PageId   rootPid;    /// the PageId of the root node
   int      treeHeight; /// the height of the tree
+  char buffer[PageFile::PAGE_SIZE];
   /// Note that the content of the above two variables will be gone when
   /// this class is destructed. Make sure to store the values of the two 
   /// variables in disk, so that they can be reconstructed when the index

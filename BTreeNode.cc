@@ -3,7 +3,6 @@
 
 using namespace std;
 
-
 /*
  * Returns a pointer to the BTLeafNode's buffer 
  */
@@ -25,7 +24,21 @@ int BTLeafNode::getBufferIndex()
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
 { 
-  return pf.read(pid, buffer);
+  // cout << "BTLeafNode :: read -- in read function" << endl;
+  pf.read(pid, buffer);
+  for (int i = 0; i < PageFile::PAGE_SIZE; ++i)
+  {
+    if (buffer[i] != -1)
+    {
+      buffer_index++;
+      // cout << "BTLeafNode :: read -- buffer_index: " << buffer_index << endl;
+    }
+    else {
+      keyCount = buffer_index / 12;
+      printf("buffer: %s", buffer);
+      return 0;
+    }
+  }
 }
     
 /*
@@ -56,22 +69,51 @@ int BTLeafNode::getKeyCount()
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
+  cout << "BTLeafNode :: insert -- key: " << key << endl;
   int potentiallyUsedBuffer = buffer_index + sizeof(int) + sizeof(RecordId);
   if(potentiallyUsedBuffer < PageFile::PAGE_SIZE){
-    for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
+    if (buffer_index == 0) //when buffer is empty
     {
-      if (key <= buffer[i])
+      cout << "BTLeafNode :: insert -- in if block cus buffer_index == 0" << endl << endl;
+      insertKey(key, 0);
+      insertRid(rid, sizeof(int));
+
+    }
+    else {
+      // for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int)) // when buffer isn't empty
+      // {
+      //   if (key <= buffer[i])
+      //   {
+      //     insertIndex = i;
+      //     memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
+      //     insertKey(key, insertIndex);
+      //     insertRid(rid, insertIndex + sizeof(int));
+      //     break;
+      //   }
+      //   else {
+      //     insertKey(key, buffer_index);
+      //     insertRid(rid, buffer_index + sizeof(int));
+
+      //   }
+      // }
+      int eid = -1;
+      locate (key, eid);
+      if (eid == -1)
       {
-        insertIndex = i;
+        insertKey(key, buffer_index);
+        insertRid(rid, buffer_index + sizeof(int));
+      }
+      else {
+        insertIndex = eid * 12;
         memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
       }
-      else {
-        insertKey(key, buffer_index);
-        insertRid(rid, buffer_index + sizeof(int));
-      }
     }
+    keyCount++;
+    buffer_index = buffer_index + sizeof(int) + sizeof(RecordId);
+    // cout << "BTLeafNode :: insert -- keyCount: " << getKeyCount() << endl;
+    // cout << "BTLeafNode :: insert -- buffer_index: " << buffer_index << endl;
       return 0;
   }
   else
@@ -153,17 +195,21 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 {
   eid = 0;
   cout << "BTLeafNode:: locate -- buffer_index: " << buffer_index <<endl;
-  for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
+  for (int i = 0; i < buffer_index-sizeof(RecordId); i = i + sizeof(RecordId) + sizeof(int))
   {
+    cout << "BTLeafNode :: locate -- value check: " << *((int *) (buffer + i)) << endl;
+    cout << "BTLeafNode :: locate -- searchKey: " << searchKey << endl;
     if (searchKey > *((int *) (buffer + i)))
     {
+      cout << "BTLeafNode :: locate -- IN IF BLOCK" <<endl;
       eid++;
     }
     else {
       break;
     }
   }
-
+  cout << "BTLeafNode :: locate -- eid: " << eid <<endl;
+  cout << "BTLeafNode :: locate -- keyCount: " << keyCount <<endl;
   if (eid == getKeyCount())
   {
     cout << "BTLeafNode :: locate -- didn't find eid" << endl;
@@ -228,11 +274,18 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * Returns False if node is full
  */
 bool BTLeafNode::insertKey(int key, int insertIndex){
-    if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
+    if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE) {
+      // cout << "BTLeafNode :: insertKey -- buffer_index: " << buffer_index << endl;
+      // cout << "BTLeafNode :: insertKey -- about to return false" << endl;
       return false;
+    }
     memcpy((char*) (buffer + insertIndex), &key, sizeof(int));
-    buffer_index+=sizeof(int);
-    keyCount++;
+    cout << "BTLeafNode :: insertKey: " << key << endl;
+    cout << "BTLeafNode :: insertKey -- insertIndex: " << insertIndex << endl;
+    // buffer_index = buffer_index + sizeof(int);
+    // keyCount++;
+    // cout << "BTLeafNode :: insertKey -- buffer_index: " << buffer_index << endl;
+    // cout << "BTLeafNode :: insertKey -- keyCount: " << getKeyCount() << endl;
     return true;
 }
 
@@ -245,7 +298,7 @@ bool BTLeafNode::insertPid(PageId pid, int insertIndex){
   if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
       return false;
   memcpy((char*)(buffer + insertIndex), &pid, sizeof(PageId));
-  buffer_index+=sizeof(PageId);
+  buffer_index = buffer_index + sizeof(PageId);
   return true;
 }
 
@@ -259,9 +312,9 @@ bool BTLeafNode::insertRid(const RecordId& rid, int insertIndex)
   if(buffer_index + sizeof(PageId) + sizeof(int) >= PageFile::PAGE_SIZE)
       return false;
   memcpy((char*)(buffer + insertIndex), &rid.pid, sizeof(PageId));
-  buffer_index+=sizeof(PageId);
+  // buffer_index = buffer_index + sizeof(PageId);
   memcpy((char*)(buffer + insertIndex + sizeof(PageId)), &rid.sid, sizeof(int));
-  buffer_index+=sizeof(int);
+  // buffer_index = buffer_index + sizeof(int);
   return true;
 }
 
@@ -273,10 +326,20 @@ bool BTLeafNode::insertRid(const RecordId& rid, int insertIndex)
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
 { 
-  if(!pf.read(pid, buffer))
-    return 0; 
-  else
-    return RC_FILE_READ_FAILED;
+  // cout << "BTNonLeafNode :: read -- in read function" << endl;
+  pf.read(pid, buffer);
+  for (int i = 0; i < PageFile::PAGE_SIZE; ++i)
+  {
+    if (buffer[i] != -1)
+    {
+      buffer_index++;
+    }
+    else {
+      keyCount = buffer_index/8;
+      printf("buffer: %s", buffer);
+      return 0;
+    }
+  }
 }
     
 /*
@@ -287,10 +350,11 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  */
 RC BTNonLeafNode::write(PageId pid, PageFile& pf)
 { 
-  if(!pf.write(pid, buffer))
-    return 0;
-  else
-    return RC_FILE_WRITE_FAILED;
+  // if(!pf.write(pid, buffer))
+  //   return 0;
+  // else
+  //   return RC_FILE_WRITE_FAILED;
+    return pf.write(pid, buffer);
 }
 
 /*

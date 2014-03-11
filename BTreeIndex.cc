@@ -19,6 +19,8 @@ using namespace std;
 BTreeIndex::BTreeIndex()
 {
     rootPid = -1;
+    memset(buffer, 0, PageFile::PAGE_SIZE);
+
 }
 
 /*
@@ -31,14 +33,13 @@ BTreeIndex::BTreeIndex()
 RC BTreeIndex::open(const string& indexname, char mode)
 {
     //PageFile pf(indexname, mode);
-    
+    // char buffer[PageFile::PAGE_SIZE];
+    // memset(buffer, 0, PageFile::PAGE_SIZE);
+
     if (pf.open (indexname, mode) !=0) {
         cout << "BTreeIndex :: open -- cannot open index file" << endl;
     	return 1; 
     }
-    
-    char buffer[PageFile::PAGE_SIZE];
-    memset(buffer, 0, PageFile::PAGE_SIZE);
 
     cout << "BTreeIndex :: open -- endPid: " << pf.endPid() << endl;
 
@@ -75,8 +76,8 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
-    char buffer[PageFile::PAGE_SIZE];
-    memset(buffer, 0, PageFile::PAGE_SIZE);
+    // char buffer[PageFile::PAGE_SIZE];
+    // memset(buffer, 0, PageFile::PAGE_SIZE);
     buffer[0] = (PageId)rootPid;
     buffer[sizeof(PageId)] = (int)treeHeight;
 
@@ -98,70 +99,134 @@ RC BTreeIndex::close()
 * OUT: siblingKey -- equivalent to midKey in insertAndSplit, needed to insert into parent node
 */
 
-RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool& overflow, int height, PageId pid, PageId& siblingPid, int& siblingKey) {
+// RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool& overflow, int height, PageId pid, PageId& siblingPid, int& siblingKey) {
 
-    overflow = false;
-    if (height == treeHeight) //leaf node, base case.
+//     overflow = false;
+//     if (height == treeHeight) //leaf node, base case.
+//     {
+//         BTLeafNode leaf;
+//         leaf.read(pid, pf);
+//         if (leaf.insert(key, rid) == RC_NODE_FULL)
+//         {
+//             overflow = true;
+//             BTLeafNode siblingLeaf;
+//             if (leaf.insertAndSplit(key, rid, siblingLeaf, siblingKey))
+//             {
+//                 return 1; //ERROR IN SPLIT
+//             }
+//             siblingPid = pf.endPid();
+//             siblingLeaf.setNextNodePtr(leaf.getNextNodePtr());
+//             leaf.setNextNodePtr(siblingPid);
+
+//             if (siblingLeaf.write(siblingPid, pf))
+//             {
+//                 return RC_FILE_WRITE_FAILED;
+//             }
+//             if (leaf.write(pid, pf))
+//             {
+//                 return RC_FILE_WRITE_FAILED;
+//             }
+//         }
+//     }
+
+//     else { //nonleaf node
+//         BTNonLeafNode nonleaf;
+//         PageId childPid;
+
+//         nonleaf.read(pid, pf);
+//         nonleaf.locateChildPtr(key, childPid);
+//         insertHelp(key, rid, overflow, height+1, childPid, siblingPid, siblingKey);
+
+//         if (overflow)
+//         {
+//             if (nonleaf.insert(siblingKey, siblingPid)) //nonleaf full
+//             {
+
+//                 BTNonLeafNode siblingNonLeaf;
+//                 int midKey;                
+
+//                 if (siblingNonLeaf.insertAndSplit(siblingKey, siblingPid, siblingNonLeaf, midKey))
+//                 {
+//                     return 1; //ERROR IN SPLIT. TOO BAD.
+//                 }
+//                 siblingKey = midKey;
+//                 siblingPid = pf.endPid();
+//                 if (siblingNonLeaf.write(siblingPid, pf))
+//                 {
+//                     return RC_FILE_WRITE_FAILED;
+//                 }
+//             }
+//             else {
+//                 overflow = false;
+//             }
+//             nonleaf.write(pid, pf);
+//         }
+//     }
+//     return 0;
+// }
+
+RC BTreeIndex::insertHelper(int key, const RecordId& rid, PageId pid, int height, int& ofKey, PageId& ofPid)
+{
+  ofKey = -1;
+
+  // Base case: at leaf node
+  if (height == treeHeight)
+  {
+    BTLeafNode ln;
+    ln.read(pid, pf);
+    if (ln.insert(key, rid))
     {
-        BTLeafNode leaf;
-        leaf.read(pid, pf);
-        if (leaf.insert(key, rid) == RC_NODE_FULL)
-        {
-            overflow = true;
-            BTLeafNode siblingLeaf;
-            if (leaf.insertAndSplit(key, rid, siblingLeaf, siblingKey))
-            {
-                return 1; //ERROR IN SPLIT
-            }
-            siblingPid = pf.endPid();
-            siblingLeaf.setNextNodePtr(leaf.getNextNodePtr());
-            leaf.setNextNodePtr(siblingPid);
+      // Overflow. Create new leaf node and split.
+      BTLeafNode newNode;
+      if (ln.insertAndSplit(key, rid, newNode, ofKey))
+        return 1;
 
-            if (siblingLeaf.write(siblingPid, pf))
-            {
-                return RC_FILE_WRITE_FAILED;
-            }
-            if (leaf.write(pid, pf))
-            {
-                return RC_FILE_WRITE_FAILED;
-            }
-        }
+      // Set new nextNode pointers
+      ofPid = pf.endPid();
+      newNode.setNextNodePtr(ln.getNextNodePtr());
+      ln.setNextNodePtr(ofPid);
+
+      if (newNode.write(ofPid, pf))
+        return 1;
     }
+    if (ln.write(pid, pf))
+      return 1;
+  }
+  // Recursive: At non-leaf node
+  else
+  {
+    BTNonLeafNode nln;
+    int eid;
+    PageId child;
 
-    else { //nonleaf node
-        BTNonLeafNode nonleaf;
-        PageId childPid;
+    nln.read(pid, pf);
+    nln.locateChildPtr(key, child);
+    // nln.readEntry(eid, child);
+    insertHelper (key, rid, child, height+1, ofKey, ofPid);
+    if (ofKey > 0)
+    {
+      // Child node overflowed. Insert (key,pid) into this node.
+      if (nln.insert(ofKey, ofPid))
+      {
+        // Non-leaf node overflow. Split node between siblings.
+        int midKey;
+        BTNonLeafNode sibling;
 
-        nonleaf.read(pid, pf);
-        nonleaf.locateChildPtr(key, childPid);
-        insertHelp(key, rid, overflow, height+1, childPid, siblingPid, siblingKey);
-
-        if (overflow)
-        {
-            if (nonleaf.insert(siblingKey, siblingPid)) //nonleaf full
-            {
-
-                BTNonLeafNode siblingNonLeaf;
-                int midKey;                
-
-                if (siblingNonLeaf.insertAndSplit(siblingKey, siblingPid, siblingNonLeaf, midKey))
-                {
-                    return 1; //ERROR IN SPLIT. TOO BAD.
-                }
-                siblingKey = midKey;
-                siblingPid = pf.endPid();
-                if (siblingNonLeaf.write(siblingPid, pf))
-                {
-                    return RC_FILE_WRITE_FAILED;
-                }
-            }
-            else {
-                overflow = false;
-            }
-            nonleaf.write(pid, pf);
-        }
+        if (nln.insertAndSplit(ofKey, ofPid, sibling, midKey))
+          return 1;
+        ofKey = midKey;
+        ofPid = pf.endPid();
+        if (sibling.write(ofPid, pf))
+          return 1;
+      }
+      else
+      {
+        ofKey = -1;
+      }
+      nln.write(pid, pf);
     }
-    return 0;
+  }
+  return 0;
 }
 
 /*
@@ -170,41 +235,79 @@ RC BTreeIndex::insertHelp (int key, const RecordId& rid, bool& overflow, int hei
  * @param rid[IN] the RecordId for the record being inserted into the index
  * @return error code. 0 if no error
  */
+// RC BTreeIndex::insert(int key, const RecordId& rid)
+// {
+//     if (treeHeight == 0) //initialize root node
+//     {
+//         BTLeafNode leaf;
+//         leaf.insert(key, rid);
+//         rootPid = pf.endPid();
+//         treeHeight = 1;
+//         leaf.write(rootPid, pf);
+//         return 0;
+//     }
+
+//     bool overflow = false;
+//     PageId siblingPid = -1;
+//     int siblingKey = -1;
+
+// if (insertHelper(key, rid, rootPid, 1, siblingKey, siblingPid))
+// {
+//     return 1;
+// }
+//     // if (insertHelp(key, rid, overflow, 1, rootPid, siblingPid, siblingKey))
+//     // {
+//     //     return 1; // ERROR SOMEHWERE IN INSERT TOO BAD SO SAD.
+//     // }
+
+//     //new root node cus of overflow
+//     if (overflow)
+//     {
+//         cout << "BTreeIndex :: insert -- in overflow if block" << endl;
+//         BTNonLeafNode root;
+//         rootPid = pf.endPid();
+//         root.initializeRoot(rootPid, siblingKey, siblingPid);
+//         treeHeight++;
+//         if (root.write (rootPid, pf)) {
+//             cout << "BTreeIndex :: insert -- overflow new root write failed" << endl;
+//             return RC_FILE_WRITE_FAILED;
+//         }
+//     }
+//     return 0;
+// }
+
+
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
-    if (treeHeight == 0) //initialize root node
-    {
-        BTLeafNode leaf;
-        leaf.insert(key, rid);
-        rootPid = pf.endPid();
-        treeHeight = 1;
-        leaf.write(rootPid, pf);
-        return 0;
-    }
+  int ofKey;
+  PageId ofPid;
 
-    bool overflow = false;
-    PageId siblingPid = -1;
-    int siblingKey = -1;
-
-    if (insertHelp(key, rid, overflow, 1, rootPid, siblingPid, siblingKey))
-    {
-        return 1; // ERROR SOMEHWERE IN INSERT TOO BAD SO SAD.
-    }
-
-    //new root node cus of overflow
-    if (overflow)
-    {
-        BTNonLeafNode root;
-        rootPid = pf.endPid();
-        root.initializeRoot(rootPid, siblingKey, siblingPid);
-        treeHeight++;
-        if (root.write (rootPid, pf)) {
-            return RC_FILE_WRITE_FAILED;
-        }
-    }
+  //If new index, simply add a root node
+  if (treeHeight == 0)
+  {
+    BTLeafNode ln;
+    ln.insert(key, rid);
+    rootPid = pf.endPid();
+    treeHeight = 1;
+    ln.write(rootPid, pf);
     return 0;
-}
+  }
 
+  if (insertHelper(key, rid, rootPid, 1, ofKey, ofPid))
+    return 1;
+
+  // If overflow at top level, create new root node
+  if (ofKey > 0)
+  {
+    BTNonLeafNode newRoot;
+    newRoot.initializeRoot(rootPid, ofKey, ofPid);
+    rootPid = pf.endPid();
+    treeHeight++;
+    newRoot.write(rootPid, pf);
+  }
+  cout << "BTreeIndex :: insert -- treeHeight: " << treeHeight << endl << endl;
+  return 0;
+}
 /*
  * Find the leaf-node index entry whose key value is larger than or 
  * equal to searchKey, and output the location of the entry in IndexCursor.
@@ -229,36 +332,37 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor) //might need to re-do
     PageId childPid = -1;
     // PageId pid = rootPid;
     int currHeight = 0;
-    BTNonLeafNode nonleaf;
-    nonleaf.read(rootPid, pf);
-    while (currHeight < treeHeight-1) { // if it's a nonleaf node
-        nonleaf.locateChildPtr(searchKey, childPid);
-        currHeight++;
+    if (currHeight < treeHeight-1) {
+        BTNonLeafNode nonleaf;
+        nonleaf.read(rootPid, pf);
+        cout << "BTreeIndex :: locate -- nonleaf.read buffer_index: " << nonleaf.getBufferIndex() << endl;
+        while (currHeight < treeHeight-1) { // if it's a nonleaf node
+            nonleaf.locateChildPtr(searchKey, childPid);
+            currHeight++;
+        }
+        BTLeafNode leaf;
+        if (childPid > -1)
+        {
+            cout << "BTreeIndex :: locate -- childPid: " << childPid << endl;
+            leaf.read(childPid, pf);
+            cursor.pid = childPid;
+            leaf.locate(searchKey, cursor.eid);
+            return 0;
+        }
     }
-    BTLeafNode leaf;
-    if (childPid < -1)
-    {
-        cout << "BTreeIndex :: locate -- childPid: " << childPid << endl;
-        leaf.read(childPid, pf);
-        cursor.pid = childPid;
-        leaf.locate(searchKey, cursor.eid);
-        return 0;
-    }
-    else if (childPid == -1) { // root is a leaf node
-        cout << "BTreeIndex :: locate -- in else if statement" << endl;
+    else { // root is a leaf node
+        cout << "BTreeIndex :: locate -- root is a leaf node" << endl;
+        BTLeafNode leaf;
         if (leaf.read(rootPid, pf) != 0)
         {
             cout << "BTreeIndex :: locate -- cannot read rootNode :( " << endl;
         }
-        // leaf.read(rootPid, pf);
-
         cout << "BTreeIndex :: locate -- leaf properly read? buffer_index: " << leaf.getBufferIndex() << endl;
         cursor.pid = rootPid;
         leaf.locate(searchKey, cursor.eid);
         return 0;
     }
-    else
-        return 1;
+    return 1;
 
 
     // int leafPid;

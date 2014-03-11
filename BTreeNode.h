@@ -21,7 +21,7 @@ class BTLeafNode {
   public:
 
     BTLeafNode(){
-        memset(buffer, 0, PageFile::PAGE_SIZE);
+        memset(buffer, -1, PageFile::PAGE_SIZE);
         buffer_index = 0;
         keyCount = 0;
     }
@@ -171,11 +171,15 @@ class BTNonLeafNode {
     // Constructor for BTNonLeafNode
     // Inits private vars
     BTNonLeafNode(){
-        memset(buffer, 0, PageFile::PAGE_SIZE);
+        memset(buffer, -1, PageFile::PAGE_SIZE);
         buffer_index = 0;
         keyCount = 0;
     }
 
+int getBufferIndex()
+{
+  return buffer_index;
+}
 /*
     BTNonLeafNode(PageId pid, PageFile pf){
         memset(buffer, 0, PageFile::PAGE_SIZE);
