@@ -7,9 +7,9 @@ using namespace std;
 /*
  * Returns a pointer to the BTLeafNode's buffer 
  */
-char* BTLeafNode::getBuffer()
+int BTLeafNode::getBuffer()
 {
-  return buffer;
+  return buffer_index;
 }
 
 /*
@@ -147,7 +147,7 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
 RC BTLeafNode::locate(int searchKey, int& eid)
 {
   eid = 0;
-  // cout << "BTLeafNode:: locate -- buffer_index: " << buffer_index <<endl;
+  cout << "BTLeafNode:: locate -- buffer_index: " << buffer_index <<endl;
   for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
   {
     if (searchKey > *(int *) (buffer + i))
@@ -161,6 +161,8 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 
   if (eid == getKeyCount())
   {
+    cout << "BTLeafNode :: locate -- didn't find eid" << endl;
+    eid = -1;
     return RC_NO_SUCH_RECORD;
   }
   return 0;

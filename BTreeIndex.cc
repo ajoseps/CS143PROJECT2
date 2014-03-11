@@ -33,32 +33,39 @@ RC BTreeIndex::open(const string& indexname, char mode)
     //PageFile pf(indexname, mode);
     
     if (pf.open (indexname, mode) !=0) {
+        cout << "BTreeIndex :: open -- cannot open index file" << endl;
     	return 1; 
     }
     
     char buffer[PageFile::PAGE_SIZE];
     memset(buffer, 0, PageFile::PAGE_SIZE);
 
+    cout << "BTreeIndex :: open -- endPid: " << pf.endPid() << endl;
+
     //if file is empty, initialize rootPid & treeHeight
     if (pf.endPid()==0)
     {
         rootPid = -1;
         treeHeight = 0;
+        if (pf.write(0, buffer) != 0)
+        {
+            cout << "BTreeIndex :: open -- cannot write to pf" << endl;
+           return RC_FILE_WRITE_FAILED;
+        }
     }
-    if (pf.write(0, buffer))
-    {
-       return RC_FILE_WRITE_FAILED;
-    }
+
     else {
         if (pf.read(0, buffer) != 0)
         {
+            cout << "BTreeIndex :: open -- cannot read pf" << endl;
             return 1;
         }
         rootPid = *(PageId *)buffer;
         treeHeight = *(int *)(buffer + sizeof(PageId));
     }
 
-    cout<< "BTreeIndex:: open rootPid: " <<rootPid<<endl;
+    cout << "BTreeIndex :: open -- rootPid: " << rootPid << endl;
+    cout << "BTreeIndex :: open -- treeHeight: " << treeHeight << endl;
     return 0;
 }
 
@@ -220,20 +227,33 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor) //might need to re-do
 {
     PageId childPid = -1;
-    PageId pid = rootPid;
+    // PageId pid = rootPid;
     int currHeight = 0;
-    while (currHeight < treeHeight-1) {
-        BTNonLeafNode nonleaf;
-        nonleaf.read(pid, pf);
+    BTNonLeafNode nonleaf;
+    nonleaf.read(rootPid, pf);
+    while (currHeight < treeHeight-1) { // if it's a nonleaf node
         nonleaf.locateChildPtr(searchKey, childPid);
         currHeight++;
     }
-    cout<<"tree height: " << treeHeight <<endl;
     BTLeafNode leaf;
     if (childPid < -1)
     {
+        cout << "BTreeIndex :: locate -- childPid: " << childPid << endl;
         leaf.read(childPid, pf);
         cursor.pid = childPid;
+        leaf.locate(searchKey, cursor.eid);
+        return 0;
+    }
+    else if (childPid == -1) { // root is a leaf node
+        cout << "BTreeIndex :: locate -- in else if statement" << endl;
+        if (leaf.read(rootPid, pf) != 0)
+        {
+            cout << "BTreeIndex :: locate -- cannot read rootNode :( " << endl;
+        }
+        // leaf.read(rootPid, pf);
+
+        cout << "BTreeIndex :: locate -- leaf properly read? buffer_index: " << leaf.getBuffer() << endl;
+        cursor.pid = rootPid;
         leaf.locate(searchKey, cursor.eid);
         return 0;
     }
