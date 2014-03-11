@@ -60,8 +60,8 @@ RC BTreeIndex::open(const string& indexname, char mode)
             cout << "BTreeIndex :: open -- cannot read pf" << endl;
             return 1;
         }
-        rootPid = *(PageId *)buffer;
-        treeHeight = *(int *)(buffer + sizeof(PageId));
+        rootPid = *((PageId *)buffer);
+        treeHeight = *((int *)(buffer + sizeof(PageId)));
     }
 
     cout << "BTreeIndex :: open -- rootPid: " << rootPid << endl;
@@ -252,7 +252,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor) //might need to re-do
         }
         // leaf.read(rootPid, pf);
 
-        cout << "BTreeIndex :: locate -- leaf properly read? buffer_index: " << leaf.getBuffer() << endl;
+        cout << "BTreeIndex :: locate -- leaf properly read? buffer_index: " << leaf.getBufferIndex() << endl;
         cursor.pid = rootPid;
         leaf.locate(searchKey, cursor.eid);
         return 0;

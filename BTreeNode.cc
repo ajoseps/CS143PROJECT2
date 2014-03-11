@@ -7,7 +7,12 @@ using namespace std;
 /*
  * Returns a pointer to the BTLeafNode's buffer 
  */
-int BTLeafNode::getBuffer()
+char* BTLeafNode::getBuffer()
+{
+  return buffer;
+}
+
+int BTLeafNode::getBufferIndex()
 {
   return buffer_index;
 }
@@ -131,7 +136,7 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     PageId siblingPid = sibling.buffer[0];
     insertPid(siblingPid, splitIndex);
     buffer_index = splitIndex + sizeof(PageId); 
-    siblingKey = *(int *)(sibling.buffer + sizeof(RecordId));
+    siblingKey = *((int *)(sibling.buffer + sizeof(RecordId)));
     return true;
   }
 }
@@ -150,7 +155,7 @@ RC BTLeafNode::locate(int searchKey, int& eid)
   cout << "BTLeafNode:: locate -- buffer_index: " << buffer_index <<endl;
   for (int i = sizeof(RecordId); i < buffer_index; i = i + sizeof(RecordId) + sizeof(int))
   {
-    if (searchKey > *(int *) (buffer + i))
+    if (searchKey > *((int *) (buffer + i)))
     {
       eid++;
     }
@@ -187,9 +192,9 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
   else if (eid <= getKeyCount())
   {
     // cout<< "EID IN IF: " << eid << endl << "check cond: "<< 0-4-8 << endl;
-    key = *(int *) (buffer + eid);
-    rid.pid = *(PageId *) (buffer + eid+sizeof(int)); //struct rid = pid and sid WHICH ONE FIRST?????
-    rid.sid = *(int *) (buffer + eid + sizeof(PageId) + sizeof(int));
+    key = *((int *) (buffer + eid));
+    rid.pid = *((PageId *) (buffer + eid+sizeof(int))); //struct rid = pid and sid WHICH ONE FIRST?????
+    rid.sid = *((int *) (buffer + eid + sizeof(PageId) + sizeof(int)));
     return 0;
   }
   
@@ -203,7 +208,7 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 {
-  return *(PageId *)(buffer + buffer_index-sizeof(PageId));
+  return *((PageId *)(buffer + buffer_index-sizeof(PageId)));
 }
 
 /*

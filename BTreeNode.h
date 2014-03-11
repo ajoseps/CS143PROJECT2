@@ -37,9 +37,11 @@ class BTLeafNode {
 
 
     /**
-     * Returns buffer_index of LeafNode
+     * Returns a char pointer to buffer of LeafNode
      */
-    int getBuffer();
+    char* getBuffer();
+
+    int getBufferIndex();
       
    /**
     * Insert the (key, rid) pair to the node.
