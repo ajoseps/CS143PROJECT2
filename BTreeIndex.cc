@@ -45,14 +45,20 @@ RC BTreeIndex::open(const string& indexname, char mode)
         rootPid = -1;
         treeHeight = 0;
     }
+    if (pf.write(0, buffer))
+    {
+       return RC_FILE_WRITE_FAILED;
+    }
     else {
         if (pf.read(0, buffer) != 0)
         {
             return 1;
         }
-        rootPid = (PageId)buffer[0];
-        treeHeight = (int)(buffer[sizeof(PageId)]);
+        rootPid = *(PageId *)buffer;
+        treeHeight = *(int *)(buffer + sizeof(PageId));
     }
+
+    cout<< "BTreeIndex:: open rootPid: " <<rootPid<<endl;
     return 0;
 }
 
@@ -68,6 +74,7 @@ RC BTreeIndex::close()
     buffer[sizeof(PageId)] = (int)treeHeight;
 
     if (pf.write(0, buffer) != 0 ) {
+        cout<< "BTreeIndex::close failed" <<endl;
         return RC_FILE_WRITE_FAILED;
     }
     return pf.close();
@@ -221,7 +228,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor) //might need to re-do
         nonleaf.locateChildPtr(searchKey, childPid);
         currHeight++;
     }
-
+    cout<<"tree height: " << treeHeight <<endl;
     BTLeafNode leaf;
     if (childPid < -1)
     {
@@ -269,13 +276,13 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     // Read in the page's buffer, into a local buffer
     // cout<< "BTreeIndex:: readForward -- cursor.eid: " << cursor.eid << endl << "pid: " <<cursor.pid <<endl;
     PageId searchPid = -1;
-    if (cursor.pid < -1)
+    if (cursor.pid > -1)
     {
         searchPid = cursor.pid;
     }
     // might need to check if leafnode
     BTLeafNode node;
-    if (searchPid < -1 && searchPid >= pf.endPid())
+    if (searchPid > -1 && searchPid < pf.endPid())
     {
         node.read(searchPid, pf);
     }

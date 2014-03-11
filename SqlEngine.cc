@@ -239,14 +239,14 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       next_tuple:
       ++rid;
     }
-
+    }
     is_count:
     // print matching tuple count if "select count(*)"
     if (attr == 4) {
       fprintf(stdout, "%d\n", count);
     }
     rc = 0;
-  }
+  
   // close the table file and return
   exit_select:
   rf.close();

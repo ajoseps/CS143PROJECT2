@@ -61,12 +61,10 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
         memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
-//        return 0;
       }
       else {
         insertKey(key, buffer_index);
         insertRid(rid, buffer_index + sizeof(int));
-//        return 0;
       }
     }
       return 0;
