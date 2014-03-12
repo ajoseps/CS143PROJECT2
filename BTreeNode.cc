@@ -179,11 +179,11 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     //set sibling's buffer_index
     sibling.buffer_index = buffer_index - splitIndex;
     // PageId siblingPid = sibling.buffer[0]; //WRONG: sibling.buffer[0] is a key, not a PageId
-    PageId siblingPid = endPid();
+    PageId siblingPid = *(PageId *)(sibling.buffer + sizeof(int));
     insertPid(siblingPid, splitIndex);
     // buffer_index += sizeof(PageId);
     buffer_index = splitIndex + sizeof(PageId); 
-    siblingKey = *((int *)(sibling.buffer);
+    siblingKey = *(int *)(sibling.buffer);
     return true;
   }
 }
@@ -502,9 +502,10 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
   // !insert because insert returns 0 if it returns succesfully
-  if(insertPid(pid1, 0) && insert(key, pid2) == 0)
+  if(insertPid(pid1, 0) && insert(key, pid2) == 0){
     buffer_index = buffer_index + sizeof(PageId);
     return 0; 
+  }
   else
     return 1; // ERROR
 }
