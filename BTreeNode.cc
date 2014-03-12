@@ -109,6 +109,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
         memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), &(buffer[insertIndex]), potentiallyUsedBuffer-insertIndex);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
+        cout << "BTLeafNode :: insert -- buffer_index: " << buffer_index << endl;
       }
     }
     keyCount++;
@@ -174,13 +175,15 @@ bool BTLeafNode::split (BTLeafNode& sibling, int& siblingKey) {
     int halfKeyCount = (int)floor(keyCount/2);
     int splitIndex = sizeof(RecordId) * halfKeyCount + sizeof(int) * halfKeyCount;
     
-    memcpy ((char*)sibling.buffer, (buffer + splitIndex), buffer_index - splitIndex + 1);
+    memcpy ((char*)sibling.buffer, (buffer + splitIndex), buffer_index - splitIndex);
     //set sibling's buffer_index
     sibling.buffer_index = buffer_index - splitIndex;
-    PageId siblingPid = sibling.buffer[0];
+    // PageId siblingPid = sibling.buffer[0]; //WRONG: sibling.buffer[0] is a key, not a PageId
+    PageId siblingPid = endPid();
     insertPid(siblingPid, splitIndex);
+    // buffer_index += sizeof(PageId);
     buffer_index = splitIndex + sizeof(PageId); 
-    siblingKey = *((int *)(sibling.buffer + sizeof(RecordId)));
+    siblingKey = *((int *)(sibling.buffer);
     return true;
   }
 }
@@ -300,7 +303,7 @@ bool BTLeafNode::insertPid(PageId pid, int insertIndex){
   if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
       return false;
   memcpy((char*)(buffer + insertIndex), &pid, sizeof(PageId));
-  buffer_index = buffer_index + sizeof(PageId);
+  // buffer_index = buffer_index + sizeof(PageId);
   return true;
 }
 
@@ -395,7 +398,9 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 //        return 0;
       }
     }
-      return 0;
+    buffer_index = buffer_index + sizeof(PageId) + sizeof(int);
+    keyCount++;
+    return 0;
   }
   else
     return RC_NODE_FULL; // ERROR
@@ -498,6 +503,7 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
   // !insert because insert returns 0 if it returns succesfully
   if(insertPid(pid1, 0) && insert(key, pid2) == 0)
+    buffer_index = buffer_index + sizeof(PageId);
     return 0; 
   else
     return 1; // ERROR
@@ -512,8 +518,8 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
       if(buffer_index + sizeof(int) >= PageFile::PAGE_SIZE)
         return false;
       memcpy((char*) (buffer + insertIndex), &key, sizeof(int));
-      buffer_index+=sizeof(int);
-      keyCount++;
+      // buffer_index+=sizeof(int);
+      // keyCount++;
       return true;
   }
 
@@ -526,7 +532,7 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
     if(buffer_index + sizeof(PageId) >= PageFile::PAGE_SIZE)
         return false;
     memcpy((char*) (buffer + insertIndex), &pid, sizeof(PageId));
-    buffer_index+=sizeof(PageId);
+    // buffer_index+=sizeof(PageId);
     return true;
   }
 
