@@ -104,8 +104,9 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
         insertRid(rid, buffer_index + sizeof(int));
       }
       else {
+        cout << "BTLeafNode :: insert -- in else statment / about to move buffer" << endl;
         insertIndex = eid * 12;
-        memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), (buffer + insertIndex), potentiallyUsedBuffer-insertIndex+1);
+        memcpy ((char*)(buffer + insertIndex + sizeof(RecordId) + sizeof(int)), &(buffer[insertIndex]), potentiallyUsedBuffer-insertIndex);
         insertKey(key, insertIndex);
         insertRid(rid, insertIndex + sizeof(int));
       }
@@ -113,7 +114,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     keyCount++;
     buffer_index = buffer_index + sizeof(int) + sizeof(RecordId);
     // cout << "BTLeafNode :: insert -- keyCount: " << getKeyCount() << endl;
-    // cout << "BTLeafNode :: insert -- buffer_index: " << buffer_index << endl;
+    cout << "BTLeafNode :: insert -- buffer_index: " << buffer_index << endl;
       return 0;
   }
   else
@@ -133,6 +134,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
 {
+  cout << "BTLeafNode :: insertAndSplit called" <<endl;
   if (insert(key, rid) == 0 && split(sibling, siblingKey)) //if insert succeeds, then just split node
   {
       return 0;
